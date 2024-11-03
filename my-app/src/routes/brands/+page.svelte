@@ -1,7 +1,8 @@
 <script lang="ts">
 	export let data;
-	$: allBrands = data.allBrands;
-	$: allCategories = data.allCategories;
+	//$: allBrands = data.allBrands;
+	//$: allCategories = data.allCategories;
+	$: allFucks = data.allFucks;
 </script>
 
 
@@ -15,22 +16,17 @@
    
 		</div>
 
-		<div class="flex space-x-3 pt-1">
-			<p class="text-sm text-muted-foreground font-mono ">
-				This is a test.
-			</p>
-		</div>
-
 		<div class="text-sm font-mono">
 			<table>
-				{#each allBrands as brand}
+				{#each allFucks as item}
 					<tr>
 						<th>
-							<h3>{brand.name}</h3>
+							<h3>{item.brandName}</h3>
 						</th>
-						<th class="shade"><h3>{brand.category_id}</h3></th>
-						<th class="shade"><h3>{brand.description}</h3></th>
-                        <th class="shade"><h3>{brand.website}</h3></th>
+						<th class="shade"><h3>{item.mainCategory}</h3></th>
+						<th class="shade"><h3>{item.subCategory}</h3></th>
+						<th class="shade"><h3>{item.brandDescription}</h3></th>
+                        <th class="shade"><h3>{item.brandWebsite}</h3></th>
 					</tr>
 				{/each}
 			</table>
