@@ -15,6 +15,9 @@
 </script>
 
 <svelte:window bind:scrollY />
+<svelte:head>
+	<link rel="icon" type="image/svg" href="/favicon.png" />
+</svelte:head>
 
 <header class="sticky top-0 w-full border-border bg-black {scrollY > 0 ? 'border-b' : ''}">
 	<nav class="container flex w-full max-w-[1024px] items-center space-x-5 py-4 font-mono">
