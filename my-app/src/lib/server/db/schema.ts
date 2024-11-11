@@ -13,3 +13,15 @@ export const categories = pgTable('categories', {
 	main_category: text('main_category'),
 	subcategory: text('subcategory')
 });
+
+export const products = pgTable('products', {
+	id: serial('id').primaryKey(),
+	name: text('name'),
+	description: text('description'),
+	website: text('website'),
+	brand_id: text('brand_id'),
+	msrp: integer('msrp'),
+	product_link: text('product_link'),
+	affiliate_link: text('affiliate_link'),
+	category_id: text('category_id')
+});

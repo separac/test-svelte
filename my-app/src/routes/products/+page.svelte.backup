@@ -1,24 +1,27 @@
 <script lang="ts">
 	export let data;
-	$: allBrands = data.allBrands;
+	//$: allBrands = data.allBrands;
+	//$: allCategories = data.allCategories;
+	$: allProducts = data.allProducts;
 </script>
 
 
 <div class="container max-w-[1024px] space-y-12 py-12">
 	<div class="space-y-3">
-		<h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Brands</h1>
+		<h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Products</h1>
 		<p class="text-sm text-muted-foreground font-mono ">
 			This data comes frome the database:
 		</p>
 		<div class="flex space-x-3 pt-1">
+   
 		</div>
 
 		<div class="text-sm font-mono">
 			<table>
-				{#each allBrands as item}
+				{#each allProducts as item}
 					<tr>
 						<th>
-							<h3>{item.brandName}</h3>
+							<h3>{item.productName}</h3>
 						</th>
 						<th class="shade"><h3>{item.mainCategory}</h3></th>
 						<th class="shade"><h3>{item.subCategory}</h3></th>
