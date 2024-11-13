@@ -47,12 +47,18 @@ export const load: PageServerLoad = async () => {
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(brands, eq(products.brand_id, brands.id));
+    
+      // Debug logging
+    console.log('Server Data:', {
+      productCount: allProducts.length,
+      sampleProduct: allProducts[0]
+    });
 
     return {
       products: allProducts
     };
 } catch (err) {
-    console.error('Error fetching products:', error);
+    console.error('Error fetching products:', err);
     throw error(500, 'Failed to load products');
   }
 };
