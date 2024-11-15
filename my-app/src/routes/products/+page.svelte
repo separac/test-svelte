@@ -5,12 +5,20 @@
   import { ArrowUpDown, ExternalLink, ShoppingCart } from "lucide-svelte";
   import type { PageData } from './$types';
 
+  // In +page.svelte, add this at the top of your script:
+  $effect(() => {
+    console.log('Props data:', props.data);
+    console.log('Sorted products:', sortedProducts);
+    console.log('Display products:', displayProducts);
+  });
+
+
+  // Types
   interface Product {
     id: number;
     name: string;
     description: string | null;
-    msrp: string | null;  // Changed to string because that's what we get from the DB
-    currentPrice?: string | null;
+    msrp: string | null;
     productLink: string | null;
     affiliateLink: string | null;
     mainCategory: string;
@@ -19,24 +27,28 @@
     brandWebsite: string | null;
   }
 
-  let { data } = $props<{ data: PageData }>();
+  // Props
+  let props = $props<{ data: PageData }>();
 
   // State
   let searchTerm = $state('');
-  let sortField = $state('name');
+  let sortField = $state<keyof Product>('name');
   let sortDirection = $state<'asc' | 'desc'>('asc');
+  let isLoading = $state(false);
+  let error = $state<string | null>(null);
 
-  // Format currency helper
-  const formatCurrency = (amount: number | null) => {
-    if (amount === null) return 'N/A';
+  // Helpers
+  const formatCurrency = (amount: string | null) => {
+    if (!amount) return 'N/A';
+    const numAmount = parseFloat(amount); 
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(amount);
+    }).format(numAmount);
   };
 
-  // Sort toggle function
-  function toggleSort(field: string) {
+  // Event handlers
+  function toggleSort(field: keyof Product) {
     if (sortField === field) {
       sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
@@ -45,44 +57,41 @@
     }
   }
 
-  // Computed values using $derived
+  // Computed values
   const sortedProducts = $derived(() => {
-  if (!data?.products) return [] as Product[];
-  
-  return [...data.products].sort((a, b) => {
-    let aVal = a[sortField as keyof Product];
-    let bVal = b[sortField as keyof Product];
+    const products = props.data?.products ?? [];
     
-    if (sortField === 'mainCategory') {
-      aVal = `${a.mainCategory}-${a.subCategory}`;
-      bVal = `${b.mainCategory}-${b.subCategory}`;
-    }
-    
-    if (aVal === null) return 1;
-    if (bVal === null) return -1;
-    
-    const comparison = String(aVal).localeCompare(String(bVal));
-    return sortDirection === 'asc' ? comparison : -comparison;
+    return [...products].sort((a, b) => {
+      let aVal = a[sortField];
+      let bVal = b[sortField];
+      
+      if (sortField === 'mainCategory') {
+        aVal = `${a.mainCategory}-${a.subCategory}`;
+        bVal = `${b.mainCategory}-${b.subCategory}`;
+      }
+      
+      if (aVal === null) return 1;
+      if (bVal === null) return -1;
+      
+      return sortDirection === 'asc' 
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
     });
   });
 
   const displayProducts = $derived(() => {
-  if (!searchTerm) return sortedProducts;
-  
-  const searchLower = searchTerm.toLowerCase();
-  return sortedProducts.filter(product => 
-    product.name.toLowerCase().includes(searchLower) ||
-    product.description?.toLowerCase().includes(searchLower) ||
-    product.mainCategory.toLowerCase().includes(searchLower) ||
-    product.subCategory.toLowerCase().includes(searchLower) ||
-    product.brandName.toLowerCase().includes(searchLower)
-  );
-});
+    if (!searchTerm) return sortedProducts;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return sortedProducts.filter(product => 
+      product.name.toLowerCase().includes(searchLower) ||
+      product.description?.toLowerCase().includes(searchLower) ||
+      product.mainCategory.toLowerCase().includes(searchLower) ||
+      product.subCategory.toLowerCase().includes(searchLower) ||
+      product.brandName.toLowerCase().includes(searchLower)
+    );
+  });
 </script>
-
-<div class="container max-w-[1024px] space-y-12 py-12">
-  <!-- rest of the code remains the same -->
-</div>
 
 <div class="container max-w-[1024px] space-y-12 py-12">
   <div class="space-y-3">
@@ -92,7 +101,16 @@
     <p class="text-sm text-muted-foreground font-mono">
       Browse and filter our curated selection of long-lasting products
     </p>
-    
+    {#if error}
+      <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+        <p>{error}</p>
+      </div>
+    {/if}
+    {#if isLoading}
+      <div class="flex justify-center p-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    {:else}
     <div class="flex items-center py-4">
       <Input
         placeholder="Search products..."
@@ -226,5 +244,6 @@
         </TableBody>
       </Table>
     </div>
+    {/if}
   </div>
 </div>
