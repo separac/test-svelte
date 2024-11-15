@@ -37,7 +37,7 @@
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortDirection === 'asc' 
           ? aVal.localeCompare(bVal) 
-          : bVal.localeCompare(aVal);
+          : bVal.localeCompare(aVal); 
       }
 
       return 0;
