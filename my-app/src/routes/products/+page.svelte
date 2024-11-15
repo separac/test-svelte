@@ -31,13 +31,19 @@
 
     // Sort the Filtered Products
     return [...filtered].sort((a, b) => {
-      const aVal = a[sortField] ?? '';
-      const bVal = b[sortField] ?? '';
+      const aVal = a[sortField];
+      const bVal = b[sortField];
+
+      if (sortField === 'msrp') {
+        const aNum = aVal ?? 0;
+        const bNum = bVal ?? 0;
+        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+      }
 
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortDirection === 'asc' 
           ? aVal.localeCompare(bVal) 
-          : bVal.localeCompare(aVal); 
+          : bVal.localeCompare(aVal);
       }
 
       return 0;
@@ -55,17 +61,14 @@
   }
 
   // Helper Function to Format Currency
-  function formatCurrency(amount: string | null): string {
-    if (!amount) return 'N/A';
-    const num = parseFloat(amount);
-    if (isNaN(num)) return 'N/A';
-    return num.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  function formatCurrency(amount: number | null): string {
+    if (amount === null) return 'N/A';
+    return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   }
 
   // Debugging
   // $: console.log('Display Products:', displayProducts);
   // $: console.log('Sorted Products:', sortedProducts);
-  
 </script>
 
 <!-- Debug Info Display 
@@ -75,8 +78,7 @@
 Display Products: {JSON.stringify(displayProducts, null, 2)}
 Sorted Products: {JSON.stringify(sortedProducts, null, 2)}
   </pre>
-</div>
--->
+</div>-->
 
 <!-- Main Content -->
 <div class="container max-w-[1024px] space-y-12 py-12">
@@ -146,7 +148,7 @@ Sorted Products: {JSON.stringify(sortedProducts, null, 2)}
               </Button>
             </TableHead>
 
-            <!-- Price Column -->
+            <!-- MSRP Column -->
             <TableHead>
               <Button 
                 variant="ghost" 
@@ -209,7 +211,7 @@ Sorted Products: {JSON.stringify(sortedProducts, null, 2)}
 
                 <!-- Price -->
                 <TableCell>
-                  {#if product.msrp}
+                  {#if product.msrp !== null}
                     <span class="font-medium">{formatCurrency(product.msrp)}</span>
                   {:else}
                     <span class="font-medium">N/A</span>

@@ -28,7 +28,7 @@ export const load: PageServerLoad = async () => {
     const transformedProducts: Product[] = productsData.map(p => ({
       ...p,
       description: p.description ?? '',
-      msrp: p.msrp ?? '0',
+      msrp: p.msrp ? parseFloat(p.msrp) : null, // Convert to number
       productLink: p.productLink ?? '',
       affiliateLink: p.affiliateLink ?? '',
       mainCategory: p.mainCategory ?? '',
@@ -37,7 +37,7 @@ export const load: PageServerLoad = async () => {
       brandWebsite: p.brandWebsite ?? ''
     }));
 
-    return { products: transformedProducts };
+    return { products: transformedProducts } as PageData;
   } catch (err) {
     console.error('Error fetching products:', err);
     throw error(500, 'Failed to load products');

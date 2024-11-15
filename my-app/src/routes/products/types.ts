@@ -2,7 +2,7 @@ export interface Product {
   id: number;
   name: string;
   description: string | null;
-  msrp: string | null;
+  msrp: number | null; // Changed to number
   productLink: string | null;
   affiliateLink: string | null;
   mainCategory: string | null;
