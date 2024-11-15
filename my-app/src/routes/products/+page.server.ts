@@ -4,6 +4,7 @@ import { db } from "$lib/server/db";
 import { brands, categories, products } from "$lib/server/db/schema";
 import { eq } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
+import type { Product, PageData } from './types';
 
 export const load: PageServerLoad = async () => {
   try {
@@ -24,15 +25,22 @@ export const load: PageServerLoad = async () => {
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(brands, eq(products.brand_id, brands.id));
 
-    return {
-      products: productsData
-    };
-    
+    const transformedProducts: Product[] = productsData.map(p => ({
+      ...p,
+      description: p.description ?? '',
+      msrp: p.msrp ?? '0',
+      productLink: p.productLink ?? '',
+      affiliateLink: p.affiliateLink ?? '',
+      mainCategory: p.mainCategory ?? '',
+      subCategory: p.subCategory ?? '',
+      brandName: p.brandName ?? '',
+      brandWebsite: p.brandWebsite ?? ''
+    }));
+
+    return { products: transformedProducts };
   } catch (err) {
     console.error('Error fetching products:', err);
-    throw error(500, {
-      message: 'Failed to load products',
-      cause: err instanceof Error ? err.message : 'Unknown error'
-    });
+    throw error(500, 'Failed to load products');
   }
 };
+
