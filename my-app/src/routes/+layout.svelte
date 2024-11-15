@@ -6,7 +6,8 @@
 	import ChevronDownIcon from 'lucide-svelte/icons/chevron-down';
 
 	import { Logo } from '$lib/components/logo';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
+	import { Button } from '$lib/components/ui/button';
+	import { buttonVariants } from '$lib/components/ui/button/variants';
 	import * as Sheet from '$lib/components/ui/sheet';
 
 	let { children } = $props();

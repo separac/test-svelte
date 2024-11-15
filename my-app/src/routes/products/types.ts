@@ -1,8 +1,9 @@
+// types.ts
 export interface Product {
   id: number;
   name: string;
   description: string | null;
-  msrp: number | null; // Changed to number
+  msrp: number | null;
   productLink: string | null;
   affiliateLink: string | null;
   mainCategory: string | null;
@@ -13,4 +14,21 @@ export interface Product {
 
 export interface PageData {
   products: Product[];
+  total: number;
+}
+
+export interface SortState {
+  field: keyof Product;
+  direction: 'asc' | 'desc';
+}
+
+export interface ColumnDef {
+  key: keyof Product;
+  label: string;
+  visible: boolean;
+}
+
+export interface PaginationState {
+  page: number;
+  pageSize: number;
 }

@@ -1,205 +1,174 @@
+<!-- +page.svelte -->
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "$lib/components/ui/table";
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
-  import { ArrowUpDown, ExternalLink } from "lucide-svelte";
-  import type { PageData, Product } from './types';
+  import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
+  import { ArrowUpDown, ChevronDown, ExternalLink, Eye, EyeOff } from "lucide-svelte";
+  import type { PageData, Product, SortState, ColumnDef, PaginationState } from './types';
 
-  // Props
-  export let data: PageData;
+  let { data } = $props<{ data: PageData }>();
 
-  // State Variables
-  let displayProducts: Product[] = data.products;
-  let searchTerm = '';
-  let sortField: keyof Product = 'name';
-  let sortDirection: 'asc' | 'desc' = 'asc';
-  let isLoading = false;
-  let error: string | null = null;
+  let columns = $state<ColumnDef[]>([
+    { key: 'name', label: 'Product', visible: true },
+    { key: 'mainCategory', label: 'Category', visible: true },
+    { key: 'brandName', label: 'Brand', visible: true },
+    { key: 'msrp', label: 'MSRP', visible: true }
+  ]);
 
-  // Reactive Sorted Products
-  $: sortedProducts = (() => {
-    let filtered = displayProducts;
+  let searchTerm = $state('');
+  
+  let pagination = $state<PaginationState>({
+    page: parseInt($page.url.searchParams.get('page') || '1'),
+    pageSize: parseInt($page.url.searchParams.get('pageSize') || '10')
+  });
 
-    // Apply Search Filter
-    if (searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(product => 
-        product.name.toLowerCase().includes(term) ||
-        (product.description && product.description.toLowerCase().includes(term))
-      );
-    }
+  let sort = $state<SortState>({
+    field: ($page.url.searchParams.get('sortField') as keyof Product) || 'name',
+    direction: ($page.url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc'
+  });
 
-    // Sort the Filtered Products
-    return [...filtered].sort((a, b) => {
-      const aVal = a[sortField];
-      const bVal = b[sortField];
+  let totalPages = $derived(Math.ceil(data.total / pagination.pageSize));
+  let startIndex = $derived((pagination.page - 1) * pagination.pageSize + 1);
+  let endIndex = $derived(Math.min(pagination.page * pagination.pageSize, data.total));
 
-      if (sortField === 'msrp') {
-        const aNum = aVal ?? 0;
-        const bNum = bVal ?? 0;
-        return sortDirection === 'asc' ? aNum - bNum : bNum - aNum;
-      }
+  $effect(() => {
+    const params = new URLSearchParams($page.url.searchParams);
+    params.set('page', pagination.page.toString());
+    params.set('pageSize', pagination.pageSize.toString());
+    params.set('sortField', sort.field);
+    params.set('sortDirection', sort.direction);
+    goto(`?${params.toString()}`, { keepFocus: true });
+  });
 
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortDirection === 'asc' 
-          ? aVal.localeCompare(bVal) 
-          : bVal.localeCompare(aVal);
-      }
-
-      return 0;
-    });
-  })();
-
-  // Toggle Sort Field and Direction
-  function toggleSort(field: keyof Product) {
-    if (sortField === field) {
-      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-      sortField = field;
-      sortDirection = 'asc';
+  function toggleColumn(key: keyof Product) {
+    const index = columns.findIndex(col => col.key === key);
+    if (index !== -1) {
+      columns[index].visible = !columns[index].visible;
     }
   }
 
-  // Helper Function to Format Currency
+  function toggleSort(field: keyof Product) {
+    if (sort.field === field) {
+      sort.direction = sort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      sort.field = field;
+      sort.direction = 'asc';
+    }
+  }
+
+  function changePage(newPage: number) {
+    if (newPage >= 1 && newPage <= totalPages) {
+      pagination.page = newPage;
+    }
+  }
+
   function formatCurrency(amount: number | null): string {
     if (amount === null) return 'N/A';
     return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   }
-
-  // Debugging
-  // $: console.log('Display Products:', displayProducts);
-  // $: console.log('Sorted Products:', sortedProducts);
 </script>
 
-<!-- Debug Info Display 
-<div class="bg-gray-100 p-4 mt-4 rounded">
-  <h3 class="font-bold">Debug Info:</h3>
-  <pre class="whitespace-pre-wrap overflow-x-auto">
-Display Products: {JSON.stringify(displayProducts, null, 2)}
-Sorted Products: {JSON.stringify(sortedProducts, null, 2)}
-  </pre>
-</div>-->
-
-<!-- Main Content -->
-<div class="container max-w-[1024px] space-y-12 py-12">
+<div class="container max-w-[1024px] space-y-6 py-8">
   <div class="space-y-3">
-    <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">
-      Explore Products
-    </h1>
+    <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Products</h1>
     <p class="text-sm text-muted-foreground font-mono">
       Browse and filter our curated selection of long-lasting products
     </p>
+  </div>
 
-    {#if error}
-      <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
-        <p>{error}</p>
-      </div>
-    {/if}
+  <!-- Toolbar -->
+  <div class="flex items-center justify-between gap-4">
+    <Input
+      placeholder="Search products..."
+      bind:value={searchTerm}
+      class="max-w-xs"
+    />
 
-    {#if isLoading}
-      <div class="flex justify-center p-4">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    {:else}
-      <div class="flex items-center py-4">
-        <Input
-          placeholder="Search products..."
-          bind:value={searchTerm}
-          class="max-w-sm"
-        />
-      </div>
+    <!-- Column Visibility Dropdown -->
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button 
+          variant="outline" 
+          size="sm"
+        >
+          Columns
+          <ChevronDown class="ml-2 h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {#each columns as column}
+          <DropdownMenuItem onclick={() => toggleColumn(column.key)}>
+            {#if column.visible}
+              <Eye class="mr-2 h-4 w-4" />
+            {:else}
+              <EyeOff class="mr-2 h-4 w-4" />
+            {/if}
+            {column.label}
+          </DropdownMenuItem>
+        {/each}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <!-- Product Name Column -->
+  <!-- Table -->
+  <Table>
+    <TableHeader>
+      <TableRow>
+        {#each columns as column}
+          {#if column.visible}
             <TableHead>
               <Button 
                 variant="ghost" 
-                on:click={() => toggleSort('name')}
-                class="hover:bg-muted"
+                size="sm"
+                onclick={() => toggleSort(column.key)}
+                class="hover:bg-muted flex items-center gap-2"
               >
-                Product
-                <ArrowUpDown class="ml-2 h-4 w-4" />
+                {column.label}
+                <ArrowUpDown 
+                  class={`ml-2 h-4 w-4 transition-transform ${
+                    sort.field === column.key 
+                      ? sort.direction === 'desc' 
+                        ? 'rotate-180' 
+                        : ''
+                      : ''
+                  }`}
+                />
               </Button>
             </TableHead>
+          {/if}
+        {/each}
+        <TableHead class="text-right">Links</TableHead>
+      </TableRow>
+    </TableHeader>
 
-            <!-- Category Column -->
-            <TableHead>
-              <Button 
-                variant="ghost" 
-                on:click={() => toggleSort('mainCategory')}
-                class="hover:bg-muted"
-              >
-                Category
-                <ArrowUpDown class="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-
-            <!-- Brand Column -->
-            <TableHead>
-              <Button 
-                variant="ghost" 
-                on:click={() => toggleSort('brandName')}
-                class="hover:bg-muted"
-              >
-                Brand
-                <ArrowUpDown class="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-
-            <!-- MSRP Column -->
-            <TableHead>
-              <Button 
-                variant="ghost" 
-                on:click={() => toggleSort('msrp')}
-                class="hover:bg-muted"
-              >
-                MSRP
-                <ArrowUpDown class="ml-2 h-4 w-4" />
-              </Button>
-            </TableHead>
-
-            <!-- Links Column -->
-            <TableHead class="text-right">Links</TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {#if sortedProducts.length === 0}
-            <TableRow>
-              <TableCell colspan="5">No products found</TableCell>
-            </TableRow>
-          {:else}
-            {#each sortedProducts as product (product.id)}
-              <TableRow>
-                <!-- Product Name and Description -->
-                <TableCell>
+    <TableBody>
+      {#each data.products as product (product.id)}
+        <TableRow>
+          {#each columns as column}
+            {#if column.visible}
+              <TableCell>
+                {#if column.key === 'name'}
                   <div>
                     <div class="font-medium">{product.name}</div>
                     {#if product.description}
                       <div class="text-sm text-muted-foreground">{product.description}</div>
                     {/if}
                   </div>
-                </TableCell>
-
-                <!-- Category -->
-                <TableCell>
+                {:else if column.key === 'mainCategory'}
                   <div class="text-sm">
                     <div>{product.mainCategory}</div>
                     <div class="text-muted-foreground">{product.subCategory}</div>
                   </div>
-                </TableCell>
-
-                <!-- Brand -->
-                <TableCell>
+                {:else if column.key === 'brandName'}
                   {#if product.brandWebsite}
                     <a 
                       href={product.brandWebsite}
                       target="_blank" 
                       rel="noopener noreferrer"
                       class="hover:underline inline-flex items-center gap-1"
-                      aria-label="Visit {product.brandName} website"
                     >
                       {product.brandName}
                       <ExternalLink class="h-4 w-4" />
@@ -207,51 +176,70 @@ Sorted Products: {JSON.stringify(sortedProducts, null, 2)}
                   {:else}
                     {product.brandName}
                   {/if}
-                </TableCell>
+                {:else if column.key === 'msrp'}
+                  <span class="font-medium">{formatCurrency(product.msrp)}</span>
+                {:else}
+                  {product[column.key]}
+                {/if}
+              </TableCell>
+            {/if}
+          {/each}
+          <TableCell class="text-right">
+            <div class="space-x-2 flex justify-end items-center">
+              {#if product.productLink}
+                <a
+                  href={product.productLink}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                >
+                  Official
+                  <ExternalLink class="h-4 w-4" />
+                </a>
+              {/if}
+              {#if product.affiliateLink}
+                <a
+                  href={product.affiliateLink}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="text-green-600 hover:text-green-800 inline-flex items-center gap-1"
+                >
+                  Affiliate
+                  <ExternalLink class="h-4 w-4" />
+                </a>
+              {/if}
+            </div>
+          </TableCell>
+        </TableRow>
+      {/each}
+    </TableBody>
+  </Table>
 
-                <!-- Price -->
-                <TableCell>
-                  {#if product.msrp !== null}
-                    <span class="font-medium">{formatCurrency(product.msrp)}</span>
-                  {:else}
-                    <span class="font-medium">N/A</span>
-                  {/if}
-                </TableCell>
-
-                <!-- Links -->
-                <TableCell class="text-right">
-                  <div class="space-x-2 flex justify-end items-center">
-                    {#if product.productLink}
-                      <a
-                        href={product.productLink}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        class="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
-                        aria-label="Visit official product page for {product.name}"
-                      >
-                        Official
-                        <ExternalLink class="h-4 w-4" />
-                      </a>
-                    {/if}
-                    {#if product.affiliateLink}
-                      <a
-                        href={product.affiliateLink}
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        class="text-green-600 hover:text-green-800 inline-flex items-center gap-1"
-                        aria-label="Visit affiliate product page for {product.name}"
-                      >
-                        Affiliate
-                        <ExternalLink class="h-4 w-4" />
-                      </a>
-                    {/if}
-                  </div>
-                </TableCell>
-              </TableRow>
-            {/each}
-          {/if}
-        </TableBody>
-      </Table>
-    {/if}
+  <!-- Pagination -->
+  <div class="flex items-center justify-between">
+    <div class="text-sm text-muted-foreground">
+      Showing {startIndex} to {endIndex} of {data.total} products
+    </div>
+    <div class="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pagination.page === 1}
+        onclick={() => changePage(pagination.page - 1)}
+      >
+        Previous
+      </Button>
+      <span class="text-sm font-medium">
+        Page {pagination.page} of {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={pagination.page === totalPages}
+        onclick={() => changePage(pagination.page + 1)}
+      >
+        Next
+      </Button>
+    </div>
   </div>
 </div>
