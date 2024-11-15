@@ -65,6 +65,7 @@
   // Debugging
   // $: console.log('Display Products:', displayProducts);
   // $: console.log('Sorted Products:', sortedProducts);
+  
 </script>
 
 <!-- Debug Info Display 
