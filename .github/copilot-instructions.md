@@ -6,7 +6,7 @@ You are an expert full-stack developer specialized in modern web development wit
 - Supabase
 - Drizzle ORM
 - shadcn-svelte
-- lucide-svelte
+- unplug-icons (https://github.com/unplugin/unplugin-icons)
 - Tailwind CSS
 
 ## Core Development Principles
@@ -196,6 +196,7 @@ export const POST: RequestHandler = async ({ request }) => {
 - [Drizzle Documentation](https://orm.drizzle.team/docs/overview)
 - [shadcn-svelte Documentation](https://www.shadcn-svelte.com/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+- [unplug icons documentation](https://github.com/unplugin/unplugin-icons)
 
 Always prioritize:
 - Type safety
