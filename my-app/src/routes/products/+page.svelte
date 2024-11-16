@@ -20,11 +20,12 @@
   ]);
 
   let searchTerm = $state('');
+  let currentValue = $state("10");
   
   // Updated script section
   let pagination = $state<PaginationState>({
     page: Number($page.url.searchParams.get('page')) || 1,
-    pageSize: Number($page.url.searchParams.get('pageSize')) || 10
+    pageSize: Number($page.url.searchParams.get('pageSize')) || 10 // Default page size 10
   });
 
   let sort = $state<SortState>({
@@ -254,7 +255,7 @@
                     {product.brandName}
                   {/if}
                 {:else if column.key === 'msrp'}
-                  <span class="font-medium">{formatCurrency(product.msrp)}</span>
+                  <span class="font-medium text-right block">{formatCurrency(product.msrp)}</span>
                 {:else}
                   {product[column.key]}
                 {/if}
@@ -294,109 +295,33 @@
 
   <!-- Pagination -->
   <div class="flex items-center justify-between">
-    
     <!--
-    <div class="flex items-center gap-4">
-      <div class="text-sm text-muted-foreground">
-        Showing {startIndex} to {endIndex} of {data.total} products
-      </div>
-      <Select type="single">
-        <SelectTrigger class="w-[140px]">
-          <SelectValue>
-            {pagination.pageSize} per page
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {#each pageSizeOptions as option}
-            <SelectItem 
-              value={option.value} 
-              onclick={() => handlePageSizeChange(option.value)}
-            >
-              {option.label}
-            </SelectItem>
-          {/each}
-        </SelectContent>
-      </Select>
-    </div> -->
-    
-    <!-- Selector for number of entries in table -->
-    <!-- <div class="flex items-center gap-4">
-      <div class="text-sm text-muted-foreground">
-        Showing {startIndex} to {endIndex} of {data.total} products
-      </div>
-      <Select.Root type="single">
-        <SelectTrigger class="w-[160px]">
-          <SelectValue>{pagination.pageSize} per page</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem 
-            value="10"
-            onclick={() => {
-              pagination.pageSize = 10;
-              pagination.page = 1;
-            }}
-          >
-            10 per page
-          </SelectItem>
-          <SelectItem 
-            value="20"
-            onclick={() => {
-              pagination.pageSize = 20;
-              pagination.page = 1;
-            }}
-          >
-            20 per page
-          </SelectItem>
-          <SelectItem 
-            value="50"
-            onclick={() => {
-              pagination.pageSize = 50;
-              pagination.page = 1;
-            }}
-          >
-            50 per page
-          </SelectItem>
-          <SelectItem 
-            value="100"
-            onclick={() => {
-              pagination.pageSize = 100;
-              pagination.page = 1;
-            }}
-          >
-            100 per page
-          </SelectItem>
-          <SelectItem 
-            value="all"
-            onclick={() => {
-              pagination.pageSize = data.total;
-              pagination.page = 1;
-            }}
-          >
-            Show all
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </div> -->
-    <!-- Next Try for Selector -->
     <div class="flex items-center gap-4">
       <div class="text-sm text-muted-foreground">
         Showing {endIndex} of {data.total} products
       </div>
-      <Select.Root type="single">
-        <Select.Trigger class="w-[180px]">
-          <Select.Value placeholder="Items per page" />
-        </Select.Trigger>
-        <Select.Content>
-            <Select.Item value="10">10 per page</Select.Item>
-            <Select.Item value="20">20 per page</Select.Item>
-            <Select.Item value="50">50 per page</Select.Item>
-            <Select.Item value="100">100 per page</Select.Item>
-            <Select.Item value="all">Show all</Select.Item>
-        </Select.Content>
-        <Select.Input name="favoriteFruit" />
+      <Select.Root 
+        type="single" 
+        value="10"
+        onValueChange={(value) => {
+          const newValue = value === 'all' ? data.total : parseInt(value);
+          pagination.pageSize = newValue;
+          pagination.page = 1;
+        }}
+      >
+      <Select.Trigger class="w-[180px]">
+        <Select.Value placeholder="10 per page"/>
+      </Select.Trigger>
+      <Select.Content>
+        <Select.Item value="10">10 per page</Select.Item>
+        <Select.Item value="20">20 per page</Select.Item>
+        <Select.Item value="50">50 per page</Select.Item>
+        <Select.Item value="100">100 per page</Select.Item>
+        <Select.Item value="all">Show all</Select.Item>
+      </Select.Content>
       </Select.Root>
-    </div>
-
+    </div> -->
+   
     <div class="flex items-center gap-2">
       <Button
         variant="outline"
