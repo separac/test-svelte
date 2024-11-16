@@ -22,5 +22,7 @@ export const categories = pgTable('categories', {
 export const brands = pgTable('brands', {
   id: integer('id').primaryKey(),
   name: text('name').notNull(),
+  description: text('description').notNull(),
   website: text('website'),
+  category_id: integer('category_id').references(() => categories.id),
 });
