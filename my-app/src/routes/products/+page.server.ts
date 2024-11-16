@@ -6,24 +6,26 @@ import { eq, asc, desc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 import type { Product, PageData } from './types';
 
+// Updated load function in +page.server.ts
 export const load = (async ({ url }) => {
   try {
     // Get pagination params
     const page = parseInt(url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
+    let pageSize = url.searchParams.get('pageSize') || '10';
     const sortField = url.searchParams.get('sortField') || 'name';
     const sortDirection = url.searchParams.get('sortDirection') || 'asc';
 
-    // Calculate offset
-    const offset = (page - 1) * pageSize;
-
-    // First get the total count using a simpler query
+    // Get total count first
     const totalResult = await db
       .select()
       .from(products)
       .then(results => results.length);
 
-    // Build the base query for products
+    // Handle 'all' page size
+    const limit = pageSize === 'all' ? totalResult : parseInt(pageSize);
+    const offset = page === 1 ? 0 : (page - 1) * limit;
+
+    // Build query
     let query = db
       .select({
         id: products.id,
@@ -41,7 +43,7 @@ export const load = (async ({ url }) => {
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(brands, eq(products.brand_id, brands.id));
 
-    // Add sorting based on the field
+    // Add sorting
     if (sortField === 'name') {
       query = query.orderBy(sortDirection === 'asc' ? asc(products.name) : desc(products.name));
     } else if (sortField === 'mainCategory') {
@@ -53,12 +55,12 @@ export const load = (async ({ url }) => {
     }
 
     // Add pagination
-    query = query.limit(pageSize).offset(offset);
+    if (pageSize !== 'all') {
+      query = query.limit(limit).offset(offset);
+    }
 
-    // Execute the query
     const productsData = await query;
 
-    // Transform the data
     const transformedProducts: Product[] = productsData.map(p => ({
       id: p.id,
       name: p.name ?? '',
