@@ -6,9 +6,16 @@
 	import { Input } from "$lib/components/ui/input";
 	import { Button } from "$lib/components/ui/button";
 	import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
-	import { ArrowUpDown, ChevronDown, Eye, EyeOff, RotateCcw, Globe2 } from "lucide-svelte";
 	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from './types';
 	import { getCategoryIcon } from '$lib/utils/category-icons';
+
+	// New icon imports
+	import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
+	import ChevronDownIcon from '~icons/mdi/chevron-down';
+	import EyeIcon from '~icons/mdi/eye';
+	import EyeOffIcon from '~icons/mdi/eye-off';
+	import RefreshIcon from '~icons/mdi/refresh';
+	import GlobeIcon from '~icons/mdi/web';
   
 	let { data } = $props<{ data: PageData }>();
   
@@ -140,7 +147,7 @@
 		  onclick={resetAll}
 		  class="shrink-0 gap-2"
 		>
-		  <RotateCcw class="h-4 w-4" />
+		  <RefreshIcon class="h-4 w-4" />
 		  Reset Filters
 		</Button>
 	  </div>
@@ -154,16 +161,16 @@
 			class="ml-auto"
 		  >
 			Columns
-			<ChevronDown class="ml-2 h-4 w-4" />
+			<ChevronDownIcon class="ml-2 h-4 w-4" />
 		  </Button>
 		</DropdownMenuTrigger>
 		<DropdownMenuContent align="end">
 		  {#each columns as column}
 			<DropdownMenuItem onclick={() => toggleColumn(column.key)}>
 			  {#if column.visible}
-				<Eye class="mr-2 h-4 w-4" />
+				<EyeIcon class="mr-2 h-4 w-4" />
 			  {:else}
-				<EyeOff class="mr-2 h-4 w-4" />
+				<EyeOffIcon class="mr-2 h-4 w-4" />
 			  {/if}
 			  {column.label}
 			</DropdownMenuItem>
@@ -212,7 +219,7 @@
 				>
 				  {column.label}
 				  {#if column.sortable}
-					<ArrowUpDown 
+					<ArrowUpDownIcon 
 					  class={`ml-2 h-4 w-4 transition-transform ${
 						sort.field === column.key 
 						  ? sort.direction === 'desc' 
@@ -294,7 +301,7 @@
 				  class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
 				  title="Visit website"
 				>
-				  <Globe2 class="h-4 w-4" />
+				  <GlobeIcon class="h-4 w-4" />
 				</a>
 			  {/if}
 			</TableCell>
