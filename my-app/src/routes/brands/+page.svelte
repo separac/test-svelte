@@ -126,7 +126,7 @@
   </script>
   
   <!-- HERE STARTS THE PAGE -->
-  <div class="container max-w-[1024px] space-y-6 py-8">
+  <div class="container max-w-screen-xl space-y-8 py-8">
 	<div class="space-y-3">
 	  <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Brands</h1>
 	  <p class="text-sm text-muted-foreground font-mono">

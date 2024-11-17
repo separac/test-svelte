@@ -1,15 +1,14 @@
 // types.ts
 export interface Product {
-  id: number;
+  id: string;
   name: string;
-  description: string | null;
-  msrp: number | null;
-  productLink: string | null;
-  affiliateLink: string | null;
-  mainCategory: string | null;
-  subCategory: string | null;
-  brandName: string | null;
-  brandWebsite: string | null;
+  description?: string;
+  mainCategory: string;
+  subCategory: string;
+  brandName: string;
+  brandWebsite?: string;
+  productLink?: string;
+  msrp: number;
 }
 
 export interface PageData {
@@ -26,6 +25,7 @@ export interface ColumnDef {
   key: keyof Product;
   label: string;
   visible: boolean;
+  sortable: boolean;
 }
 
 export interface PaginationState {

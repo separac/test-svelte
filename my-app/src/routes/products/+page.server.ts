@@ -2,7 +2,7 @@
 import { error } from '@sveltejs/kit';
 import { db } from "$lib/server/db";
 import { brands, categories, products } from "$lib/server/db/schema";
-import { eq, asc, desc } from 'drizzle-orm';
+import { eq, asc, desc, or, ilike } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
 import type { Product, PageData } from './types';
 
@@ -14,11 +14,25 @@ export const load = (async ({ url }) => {
     let pageSize = url.searchParams.get('pageSize') || '10';
     const sortField = url.searchParams.get('sortField') || 'name';
     const sortDirection = url.searchParams.get('sortDirection') || 'asc';
+    // Add search param
+    const search = url.searchParams.get('search')?.trim() || '';
+    console.log('Search term:', search); // Debug log
 
-    // Get total count first
+    // Get total count first with search
     const totalResult = await db
       .select()
       .from(products)
+      .leftJoin(categories, eq(products.category_id, categories.id))
+      .leftJoin(brands, eq(products.brand_id, brands.id))
+      .where(
+        search 
+          ? or(
+              ilike(products.name, `%${search}%`),
+              ilike(brands.name, `%${search}%`),
+              ilike(categories.main_category, `%${search}%`)
+            )
+          : undefined
+      )
       .then(results => results.length);
 
     // Handle 'all' page size
@@ -42,6 +56,19 @@ export const load = (async ({ url }) => {
       .from(products)
       .leftJoin(categories, eq(products.category_id, categories.id))
       .leftJoin(brands, eq(products.brand_id, brands.id));
+
+    // Add search condition
+    if (search) {
+      query = query.where(
+        or(
+          ilike(products.name, `%${search}%`),
+          ilike(products.description, `%${search}%`),
+          ilike(brands.name, `%${search}%`),
+          ilike(categories.main_category, `%${search}%`),
+          ilike(categories.subcategory, `%${search}%`)
+        )
+      );
+    }
 
     // Add sorting
     if (sortField === 'name') {

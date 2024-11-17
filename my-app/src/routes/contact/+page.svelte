@@ -42,7 +42,7 @@
 
 </script>
 
-<div class="container max-w-[1024px] space-y-12 py-12">
+<div class="container max-w-screen-xl space-y-8 py-8">
 	<div class="space-y-3">
 		<h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Contact</h1>
 		<p class="text-sm text-muted-foreground font-mono ">

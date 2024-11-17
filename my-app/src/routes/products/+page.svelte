@@ -6,23 +6,30 @@
   import { Input } from "$lib/components/ui/input";
   import { Button } from "$lib/components/ui/button";
   import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
-  import * as Select from "$lib/components/ui/select";  
-  import { ArrowUpDown, ChevronDown, ExternalLink, Eye, EyeOff } from "lucide-svelte";
-  import type { PageData, Product, SortState, ColumnDef, PaginationState } from './types';
+  import { getCategoryIcon } from '$lib/utils/category-icons';
+  import { formatCurrency } from '$lib/utils/format';
+  import { browser } from '$app/environment';
+
+  // Switch to unplugin-icons
+  import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
+  import ChevronDownIcon from '~icons/mdi/chevron-down';
+  import EyeIcon from '~icons/mdi/eye';
+  import EyeOffIcon from '~icons/mdi/eye-off';
+  import RefreshIcon from '~icons/mdi/refresh';
+  import ExternalLinkIcon from '~icons/mdi/open-in-new';
+  import ShoppingIcon from '~icons/mdi/shopping';
 
   let { data } = $props<{ data: PageData }>();
 
   let columns = $state<ColumnDef[]>([
-    { key: 'name', label: 'Product', visible: true },
-    { key: 'mainCategory', label: 'Category', visible: true },
-    { key: 'brandName', label: 'Brand', visible: true },
-    { key: 'msrp', label: 'MSRP', visible: true }
+    { key: 'name', label: 'Product', visible: true, sortable: true },
+    { key: 'mainCategory', label: 'Category', visible: true, sortable: true },
+    { key: 'brandName', label: 'Brand', visible: true, sortable: true },
+    { key: 'msrp', label: 'MSRP', visible: true, sortable: true }
   ]);
 
-  let searchTerm = $state('');
-  let currentValue = $state("10");
-  
-  // Updated script section
+  let searchTerm = $state($page.url.searchParams.get('search') || '');
+
   let pagination = $state<PaginationState>({
     page: Number($page.url.searchParams.get('page')) || 1,
     pageSize: Number($page.url.searchParams.get('pageSize')) || 10 // Default page size 10
@@ -120,27 +127,81 @@
     }
   }
 
-  function formatCurrency(amount: number | null): string {
-    if (amount === null) return 'N/A';
-    return amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  // Reset function
+  function resetAll() {
+    searchTerm = '';
+    pagination.page = 1;
+    pagination.pageSize = 10;
+    sort.field = 'name';
+    sort.direction = 'asc';
+    columns.forEach(col => col.visible = true);
+    goto('?', { keepFocus: true });
   }
+
+  // Add debounce utility
+  function debounce<T extends (...args: any[]) => any>(
+    fn: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeoutId: ReturnType<typeof setTimeout>;
+    return function (this: any, ...args: Parameters<T>) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => fn.apply(this, args), wait);
+    };
+  }
+
+  // Debounced search handler
+  const handleSearch = debounce((value: string) => {
+    if (browser) {
+      searchTerm = value;
+      pagination.page = 1; // Reset to first page on search
+      
+      // Update URL and trigger navigation
+      const params = new URLSearchParams(window.location.search);
+      params.set('search', value);
+      params.set('page', '1');
+      goto(`?${params.toString()}`, { keepFocus: true });
+    }
+  }, 300);
+
+  // Update URL effect
+  $effect(() => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set('search', searchTerm);
+    params.set('page', pagination.page.toString());
+    params.set('pageSize', pagination.pageSize.toString());
+    params.set('sortField', sort.field);
+    params.set('sortDirection', sort.direction);
+    goto(`?${params.toString()}`, { keepFocus: true });
+  });
 </script>
 
-<div class="container max-w-[1024px] space-y-6 py-8">
+<div class="container max-w-screen-xl space-y-8 py-8">
   <div class="space-y-3">
     <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Products</h1>
     <p class="text-sm text-muted-foreground font-mono">
-      Browse and filter our curated selection of long-lasting products
+      Browse and filter our curated selection of buy it for life products
     </p>
   </div>
 
   <!-- Toolbar -->
   <div class="flex items-center justify-between gap-4">
-    <Input
-      placeholder="Search products..."
-      bind:value={searchTerm}
-      class="max-w-xs"
-    />
+    <div class="flex items-center gap-2 flex-1">
+      <Input
+        placeholder="Search products..."
+        value={searchTerm}
+        on:input={(e) => handleSearch(e.currentTarget.value)}
+        class="max-w-xs"
+      />
+      <Button 
+        variant="outline" 
+        onclick={resetAll}
+        class="shrink-0 gap-2"
+      >
+        <RefreshIcon class="h-4 w-4" />
+        Reset Filters
+      </Button>
+    </div>
 
     <!-- Column Visibility Dropdown -->
     <DropdownMenu>
@@ -150,16 +211,16 @@
           size="sm"
         >
           Columns
-          <ChevronDown class="ml-2 h-4 w-4" />
+          <ChevronDownIcon class="ml-2 h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {#each columns as column}
           <DropdownMenuItem onclick={() => toggleColumn(column.key)}>
             {#if column.visible}
-              <Eye class="mr-2 h-4 w-4" />
+              <EyeIcon class="mr-2 h-4 w-4" />
             {:else}
-              <EyeOff class="mr-2 h-4 w-4" />
+              <EyeOffIcon class="mr-2 h-4 w-4" />
             {/if}
             {column.label}
           </DropdownMenuItem>
@@ -205,7 +266,7 @@
                 class="hover:bg-muted flex items-center gap-2"
               >
                 {column.label}
-                <ArrowUpDown 
+                <ArrowUpDownIcon 
                   class={`ml-2 h-4 w-4 transition-transform ${
                     sort.field === column.key 
                       ? sort.direction === 'desc' 
@@ -218,7 +279,9 @@
             </TableHead>
           {/if}
         {/each}
-        <TableHead class="text-right">Links</TableHead>
+        <TableHead class="text-right">
+          <span class="text-sm font-medium">Links</span>
+        </TableHead>
       </TableRow>
     </TableHeader>
 
@@ -228,34 +291,36 @@
           {#each columns as column}
             {#if column.visible}
               <TableCell>
-                {#if column.key === 'name'}
+                {#if column.key === 'mainCategory'}
+                  <div class="space-y-0.5 max-w-[250px]">
+                    <div class="text-sm text-gray-500">
+                      {product.mainCategory}
+                    </div>
+                    {#if product.subCategory}
+                      {@const maybeIcon = getCategoryIcon(product.subCategory, false)}
+                      <div class="flex items-center gap-1.5 text-sm">
+                        {#if maybeIcon}
+                          <div class="text-gray-600">
+                            <svelte:component this={maybeIcon.icon} size={16} />
+                          </div>
+                        {/if}
+                        <span class="text-gray-900">
+                          {product.subCategory}
+                        </span>
+                      </div>
+                    {/if}
+                  </div>
+                {:else if column.key === 'name'}
                   <div>
                     <div class="font-medium">{product.name}</div>
                     {#if product.description}
                       <div class="text-sm text-muted-foreground">{product.description}</div>
                     {/if}
                   </div>
-                {:else if column.key === 'mainCategory'}
-                  <div class="text-sm">
-                    <div>{product.mainCategory}</div>
-                    <div class="text-muted-foreground">{product.subCategory}</div>
-                  </div>
-                {:else if column.key === 'brandName'}
-                  {#if product.brandWebsite}
-                    <a 
-                      href={product.brandWebsite}
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      class="hover:underline inline-flex items-center gap-1"
-                    >
-                      {product.brandName}
-                      <ExternalLink class="h-4 w-4" />
-                    </a>
-                  {:else}
-                    {product.brandName}
-                  {/if}
                 {:else if column.key === 'msrp'}
-                  <span class="font-medium text-right block">{formatCurrency(product.msrp)}</span>
+                  <div class="text-right">
+                    {formatCurrency(product.msrp)}
+                  </div>
                 {:else}
                   {product[column.key]}
                 {/if}
@@ -263,16 +328,15 @@
             {/if}
           {/each}
           <TableCell class="text-right">
-            <div class="space-x-2 flex justify-end items-center">
+            <div class="flex justify-end items-center">
               {#if product.productLink}
                 <a
                   href={product.productLink}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  class="text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
+                  class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
                 >
-                  Official
-                  <ExternalLink class="h-4 w-4" />
+                  <ShoppingIcon class="h-4 w-4 text-gray-600" />
                 </a>
               {/if}
               {#if product.affiliateLink}
@@ -283,7 +347,7 @@
                   class="text-green-600 hover:text-green-800 inline-flex items-center gap-1"
                 >
                   Affiliate
-                  <ExternalLink class="h-4 w-4" />
+                  <ExternalLinkIcon class="h-4 w-4" />
                 </a>
               {/if}
             </div>
