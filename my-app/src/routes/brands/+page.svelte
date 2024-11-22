@@ -1,4 +1,4 @@
-<!-- +page.svelte -->
+<!-- src/routes/brands/+page.svelte -->
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { page } from "$app/stores";
@@ -8,8 +8,9 @@
 	import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
 	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from './types';
 	import { getCategoryIcon } from '$lib/utils/category-icons';
-
-	// New icon imports
+	import FeaturedBrands from "$lib/components/featured-brands.svelte";
+  
+	// Icon imports
 	import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
 	import ChevronDownIcon from '~icons/mdi/chevron-down';
 	import EyeIcon from '~icons/mdi/eye';
@@ -19,49 +20,58 @@
   
 	let { data } = $props<{ data: PageData }>();
   
-	let columns = $state<ColumnDef[]>([
-		{ key: 'brandName', label: 'Brand', visible: true, sortable: true },
-		{ key: 'mainCategory', label: 'Category', visible: true, sortable: true },
-		{ key: 'subCategory', label: 'Products', visible: true, sortable: true },
-		{ key: 'brandDescription', label: 'Description', visible: true, sortable: false }
+	// Helper function for generating consistent colors based on category
+	function getColorForCategory(category: string | null): string {
+	  const colors = [
+		'red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 
+		'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 
+		'fuchsia', 'pink', 'rose'
+	  ];
+	  
+	  if (!category) return 'gray';
+	  
+	  const index = Array.from(category.toLowerCase())
+		.reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+	  
+	  return colors[index];
+	}
+  
+	let carouselBrands = $derived(data.featuredBrands.slice(0, 3).map(brand => ({
+	  id: brand.id,
+	  name: brand.brandName,
+	  category: brand.mainCategory || '',
+	  website: brand.brandWebsite?.replace(/^https?:\/\/(www\.)?/, '') || '',
+	  description: brand.brandDescription,
+	  logo: {
+		type: 'wordmark' as const,
+		backgroundColor: `bg-${getColorForCategory(brand.mainCategory)}-50`
+	  }
+	})));
+  
+	let columns = $state([
+	  { key: 'brandName', label: 'Brand', visible: true, sortable: true },
+	  { key: 'mainCategory', label: 'Category', visible: true, sortable: true },
+	  { key: 'subCategory', label: 'Products', visible: true, sortable: true },
+	  { key: 'brandDescription', label: 'Description', visible: true, sortable: false }
 	]);
   
 	let searchTerm = $state($page.url.searchParams.get('search') || '');
 	
-	let pagination = $state<PaginationState>({
+	let pagination = $state({
 	  page: Number($page.url.searchParams.get('page')) || 1,
 	  pageSize: Number($page.url.searchParams.get('pageSize')) || 10
 	});
   
-	let sort = $state<SortState>({
+	let sort = $state({
 	  field: ($page.url.searchParams.get('sortField') as keyof Brand) || 'brandName',
 	  direction: ($page.url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc'
 	});
   
-	// Improved reset function with delayed navigation
-	function resetAll() {
-	  searchTerm = '';
-	  pagination.page = 1;
-	  pagination.pageSize = 10;
-	  sort.field = 'brandName';
-	  sort.direction = 'asc';
-	  columns.forEach(col => col.visible = true);
-	  
-	  // Reset URL parameters with a navigation
-	  goto('?', { keepFocus: true });
-	}
-  
-	function changePage(newPage: number) {
-	  if (newPage >= 1 && newPage <= totalPages) {
-		pagination.page = newPage;
-	  }
-	}
-  
-	// Derived values
 	let totalPages = $derived(Math.ceil(data.total / pagination.pageSize));
 	let startIndex = $derived((pagination.page - 1) * pagination.pageSize + 1);
 	let endIndex = $derived(Math.min(pagination.page * pagination.pageSize, data.total));
-	
+	let pageNumbers = $derived(getPageNumbers(pagination.page, totalPages));
+  
 	function getPageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
 	  const delta = 2;
 	  const range: number[] = [];
@@ -95,9 +105,6 @@
 	  return rangeWithDots;
 	}
   
-	let pageNumbers = $derived(getPageNumbers(pagination.page, totalPages));
-  
-	// URL update effect
 	$effect(() => {
 	  const params = new URLSearchParams();
 	  params.set('page', pagination.page.toString());
@@ -107,6 +114,22 @@
 	  if (searchTerm) params.set('search', searchTerm);
 	  goto(`?${params.toString()}`, { keepFocus: true });
 	});
+  
+	function resetAll() {
+	  searchTerm = '';
+	  pagination.page = 1;
+	  pagination.pageSize = 10;
+	  sort.field = 'brandName';
+	  sort.direction = 'asc';
+	  columns.forEach(col => col.visible = true);
+	  goto('?', { keepFocus: true });
+	}
+  
+	function changePage(newPage: number) {
+	  if (newPage >= 1 && newPage <= totalPages) {
+		pagination.page = newPage;
+	  }
+	}
   
 	function toggleColumn(key: keyof Brand) {
 	  const index = columns.findIndex(col => col.key === key);
@@ -125,12 +148,15 @@
 	}
   </script>
   
-  <!-- HERE STARTS THE PAGE -->
+  <!-- Featured Brands Section -->
+  <FeaturedBrands allBrands={carouselBrands} />
+  
+  <!-- Brands Table Section -->
   <div class="container max-w-screen-xl space-y-8 py-8">
 	<div class="space-y-3">
-	  <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Brands</h1>
+	  <h2 class="text-2xl font-bold tracking-tighter md:text-3xl">All Brands</h2>
 	  <p class="text-sm text-muted-foreground font-mono">
-		Browse our curated selection of buy it for life brands
+		Browse and filter our complete brand collection
 	  </p>
 	</div>
   
@@ -184,18 +210,18 @@
 		Showing {endIndex} of {data.total} brands
 	  </div>
 	  <select 
-		class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
-		focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
-		disabled:cursor-not-allowed disabled:opacity-50"
-		value={pagination.pageSize}
-		onchange={(e) => {
-		  const newValue = e.currentTarget.value === 'all' 
-			? data.total 
-			: parseInt(e.currentTarget.value);
-		  pagination.pageSize = newValue;
-		  pagination.page = 1;
-		}}
-	  >
+			class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
+			focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+			disabled:cursor-not-allowed disabled:opacity-50"
+			value={pagination.pageSize}
+			onchange={(e) => {
+				const newValue = e.currentTarget.value === 'all' 
+				? data.total 
+				: parseInt(e.currentTarget.value);
+				pagination.pageSize = newValue;
+				pagination.page = 1;
+			}}
+		>
 		<option value="10">10 per page</option>
 		<option value="20">20 per page</option>
 		<option value="50">50 per page</option>
@@ -250,40 +276,29 @@
 					  <div class="font-medium">{brand.brandName}</div>
 					</div>
 				  {:else if column.key === 'mainCategory'}
-				  <div class="text-sm flex items-center gap-2">
-					{#if brand.mainCategory}
-					  {@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
-					  {#if maybeIcon}
-						<div class={maybeIcon.color}>
-						  <maybeIcon.icon size={16} />
-						</div>
+					<div class="text-sm flex items-center gap-2">
+					  {#if brand.mainCategory}
+						{@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
+						{#if maybeIcon}
+						  <div class={maybeIcon.color}>
+							<svelte:component this={maybeIcon.icon} size={16} />
+						  </div>
+						{/if}
 					  {/if}
-					{/if}
-					<div>{brand.mainCategory}</div>
-				  </div>
-				{:else if column.key === 'subCategory'}
-				  <div class="text-sm flex items-center gap-2">
-					{#if brand.subCategory}
-					  {@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
-					  {#if maybeIcon}
-						<div class={maybeIcon.color}>
-						  <maybeIcon.icon size={16} />
-						</div>
-					  {/if}
-					{/if}
-					<div>{brand.subCategory}</div>
-				  </div>
-				 
-				 
-				 <!-- 
-				 	<div class="text-sm">
 					  <div>{brand.mainCategory}</div>
 					</div>
 				  {:else if column.key === 'subCategory'}
-					<div class="text-sm">
+					<div class="text-sm flex items-center gap-2">
+					  {#if brand.subCategory}
+						{@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
+						{#if maybeIcon}
+						  <div class={maybeIcon.color}>
+							<svelte:component this={maybeIcon.icon} size={16} />
+						  </div>
+						{/if}
+					  {/if}
 					  <div>{brand.subCategory}</div>
 					</div>
-				-->
 				  {:else if column.key === 'brandDescription'}
 					<div class="text-sm text-muted-foreground">{brand.brandDescription}</div>
 				  {:else}

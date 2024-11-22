@@ -1,10 +1,10 @@
-// +page.server.ts
+// src/routes/brands/+page.server.ts
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { brands, categories } from '$lib/server/db/schema';
 import { eq, ilike, or, desc, asc, count } from 'drizzle-orm';
-import type { Brand } from './types'; // Updated import
+import type { Brand } from './types';
 
 export const load: PageServerLoad = async ({ url }) => {
     try {
@@ -15,10 +15,8 @@ export const load: PageServerLoad = async ({ url }) => {
         const sortDirection = (url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc';
         const searchTerm = url.searchParams.get('search') || '';
         
-        // Calculate offset
         const offset = (page - 1) * pageSize;
 
-        // Build where conditions for search
         const searchCondition = searchTerm 
             ? or(
                 ilike(brands.name, `%${searchTerm}%`),
@@ -28,14 +26,29 @@ export const load: PageServerLoad = async ({ url }) => {
             )
             : undefined;
 
-        // Get total count with search filter
+        // Get featured brands (random selection)
+        const featuredBrands = await db
+            .select({
+                id: brands.id,
+                mainCategory: categories.main_category,
+                subCategory: categories.subcategory,
+                brandName: brands.name,
+                brandDescription: brands.description,
+                brandWebsite: brands.website,
+            })
+            .from(brands)
+            .leftJoin(categories, eq(brands.category_id, categories.id))
+            .limit(10)  // Get enough for carousel
+            .$dynamic();  // Make the query dynamic for random selection
+
+        // Get total count
         const [{ value: totalBrands }] = await db
             .select({ value: count(brands.id) })
             .from(brands)
             .leftJoin(categories, eq(brands.category_id, categories.id))
             .where(searchCondition);
 
-        // Build main query
+        // Main query for table
         const query = db
             .select({
                 id: brands.id,
@@ -55,16 +68,16 @@ export const load: PageServerLoad = async ({ url }) => {
                         ? sortDirection === 'desc' ? desc(categories.main_category) : asc(categories.main_category)
                         : sortField === 'subCategory'
                             ? sortDirection === 'desc' ? desc(categories.subcategory) : asc(categories.subcategory)
-                            : asc(brands.name) // Fallback to default
+                            : asc(brands.name)
             );
 
-        // Add pagination
         const allBrands = await query
             .limit(pageSize)
             .offset(offset);
 
         return {
             brands: allBrands,
+            featuredBrands,
             total: totalBrands
         };
     } catch (err) {
