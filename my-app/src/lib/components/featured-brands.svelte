@@ -127,25 +127,25 @@
     <!-- Carousel Container -->
     <div class="relative max-w-5xl mx-auto">
         <Button
-          variant="ghost"
-          size="icon"
-          class="absolute -left-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
-          onclick={prev}
-          disabled={isAnimating}
+            variant="ghost"
+            size="icon"
+            class="absolute -left-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
+            onclick={() => prev()}
+            disabled={isAnimating}
         >
-          <ChevronLeftIcon class="h-4 w-4"></ChevronLeftIcon>
+            <ChevronLeftIcon class="h-4 w-4"></ChevronLeftIcon>
         </Button>
-    
+
         <Button
-          variant="ghost"
-          size="icon"
-          class="absolute -right-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
-          onclick={next}
-          disabled={isAnimating}
+            variant="ghost"
+            size="icon"
+            class="absolute -right-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
+            onclick={() => next()}
+            disabled={isAnimating}
         >
-          <ChevronRightIcon class="h-4 w-4"></ChevronRightIcon>
+            <ChevronRightIcon class="h-4 w-4"></ChevronRightIcon>
         </Button>
-    
+
         <div class="overflow-visible px-4 carousel-track">
           <div class="flex justify-center gap-6 transition-all duration-500 ease-out">
             {#each visibleBrands as brand, i (brand.id)}

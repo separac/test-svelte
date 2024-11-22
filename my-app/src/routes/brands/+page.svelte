@@ -210,18 +210,18 @@
 		Showing {endIndex} of {data.total} brands
 	  </div>
 	  <select 
-			class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
-			focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
-			disabled:cursor-not-allowed disabled:opacity-50"
-			value={pagination.pageSize}
-			onchange={(e) => {
-				const newValue = e.currentTarget.value === 'all' 
-				? data.total 
-				: parseInt(e.currentTarget.value);
-				pagination.pageSize = newValue;
-				pagination.page = 1;
-			}}
-		>
+  class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
+  focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+  disabled:cursor-not-allowed disabled:opacity-50"
+  value={pagination.pageSize}
+  onchange={(e) => {
+    const newValue = e.currentTarget.value === 'all' 
+      ? data.total 
+      : parseInt(e.currentTarget.value);
+    pagination.pageSize = newValue;
+    pagination.page = 1;
+  }}
+>
 		<option value="10">10 per page</option>
 		<option value="20">20 per page</option>
 		<option value="50">50 per page</option>
@@ -280,9 +280,11 @@
 					  {#if brand.mainCategory}
 						{@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
 						{#if maybeIcon}
-						  <div class={maybeIcon.color}>
-							<svelte:component this={maybeIcon.icon} size={16} />
-						  </div>
+							<div class={maybeIcon.color}>
+								{#if maybeIcon.icon}
+								<maybeIcon.icon size={16} />
+								{/if}
+						  	</div>
 						{/if}
 					  {/if}
 					  <div>{brand.mainCategory}</div>
@@ -292,8 +294,10 @@
 					  {#if brand.subCategory}
 						{@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
 						{#if maybeIcon}
-						  <div class={maybeIcon.color}>
-							<svelte:component this={maybeIcon.icon} size={16} />
+						<div class={maybeIcon.color}>
+							{#if maybeIcon.icon}
+							  <maybeIcon.icon size={16} />
+							{/if}
 						  </div>
 						{/if}
 					  {/if}
