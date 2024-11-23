@@ -9,7 +9,7 @@
 	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from './types';
 	import { getCategoryIcon } from '$lib/utils/category-icons';
 	import { browser } from '$app/environment';
-	import { FeaturedBrands } from "$lib/components/featured-brands.svelte";
+	import FeaturedBrands from "$lib/components/featured-brands.svelte";
 	import { onError } from 'svelte';
   
 	// Icon imports
