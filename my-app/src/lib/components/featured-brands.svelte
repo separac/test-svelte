@@ -101,6 +101,7 @@
       };
     }
   });
+  // export { default as FeaturedBrands };
 </script>
   
   <section class="w-full max-w-7xl mx-auto px-4 py-8">
@@ -130,17 +131,17 @@
             variant="ghost"
             size="icon"
             class="absolute -left-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
-            onclick={() => prev()}
+            on:click={() => prev()}
             disabled={isAnimating}
         >
-            <ChevronLeftIcon class="h-4 w-4"></ChevronLeftIcon>
-        </Button>
-
+        <ChevronLeftIcon class="h-4 w-4"></ChevronLeftIcon>
+      </Button>
+      
         <Button
             variant="ghost"
             size="icon"
             class="absolute -right-4 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full hover:bg-background/80"
-            onclick={() => next()}
+            on:click={() => next()}
             disabled={isAnimating}
         >
             <ChevronRightIcon class="h-4 w-4"></ChevronRightIcon>

@@ -8,7 +8,9 @@
 	import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
 	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from './types';
 	import { getCategoryIcon } from '$lib/utils/category-icons';
-	import FeaturedBrands from "$lib/components/featured-brands.svelte";
+	import { browser } from '$app/environment';
+	import { FeaturedBrands } from "$lib/components/featured-brands.svelte";
+	import { onError } from 'svelte';
   
 	// Icon imports
 	import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
@@ -17,7 +19,9 @@
 	import EyeOffIcon from '~icons/mdi/eye-off';
 	import RefreshIcon from '~icons/mdi/refresh';
 	import GlobeIcon from '~icons/mdi/web';
-  
+
+	let hasError = $state(false);
+
 	let { data } = $props<{ data: PageData }>();
   
 	// Helper function for generating consistent colors based on category
@@ -36,17 +40,17 @@
 	  return colors[index];
 	}
   
-	let carouselBrands = $derived(data.featuredBrands.slice(0, 3).map(brand => ({
-	  id: brand.id,
-	  name: brand.brandName,
-	  category: brand.mainCategory || '',
-	  website: brand.brandWebsite?.replace(/^https?:\/\/(www\.)?/, '') || '',
-	  description: brand.brandDescription,
-	  logo: {
-		type: 'wordmark' as const,
-		backgroundColor: `bg-${getColorForCategory(brand.mainCategory)}-50`
-	  }
-	})));
+	let carouselBrands = $derived(data?.featuredBrands?.slice(0, 3).map(brand => ({
+		id: brand.id,
+		name: brand.brandName,
+		category: brand.mainCategory || '',
+		website: brand.brandWebsite?.replace(/^https?:\/\/(www\.)?/, '') || '',
+		description: brand.brandDescription,
+		logo: {
+			type: 'wordmark' as const,
+			backgroundColor: `bg-${getColorForCategory(brand.mainCategory)}-50`
+		}
+	})) ?? []);
   
 	let columns = $state([
 	  { key: 'brandName', label: 'Brand', visible: true, sortable: true },
@@ -55,17 +59,17 @@
 	  { key: 'brandDescription', label: 'Description', visible: true, sortable: false }
 	]);
   
-	let searchTerm = $state($page.url.searchParams.get('search') || '');
-	
 	let pagination = $state({
-	  page: Number($page.url.searchParams.get('page')) || 1,
-	  pageSize: Number($page.url.searchParams.get('pageSize')) || 10
+		page: Number($page.url.searchParams.get('page')) || 1,
+		pageSize: Number($page.url.searchParams.get('pageSize')) || 10
 	});
-  
+
 	let sort = $state({
-	  field: ($page.url.searchParams.get('sortField') as keyof Brand) || 'brandName',
-	  direction: ($page.url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc'
+		field: ($page.url.searchParams.get('sortField') as keyof Brand) || 'brandName',
+		direction: ($page.url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc'
 	});
+
+	let searchTerm = $state($page.url.searchParams.get('search') || '');
   
 	let totalPages = $derived(Math.ceil(data.total / pagination.pageSize));
 	let startIndex = $derived((pagination.page - 1) * pagination.pageSize + 1);
@@ -115,6 +119,16 @@
 	  goto(`?${params.toString()}`, { keepFocus: true });
 	});
   
+	let previousSearchTerm = '';
+
+	$effect(() => {
+	  // Prevent unnecessary updates
+	  if (searchTerm === previousSearchTerm) return;
+	  previousSearchTerm = searchTerm;
+	  
+	  pagination.page = 1;
+	});
+  
 	function resetAll() {
 	  searchTerm = '';
 	  pagination.page = 1;
@@ -146,223 +160,245 @@
 		sort.direction = 'asc';
 	  }
 	}
+
+	onError((error) => {
+		hasError = true;
+		console.error('Caught error:', error);
+	  });
   </script>
-  
+
+{#if hasError}
+	<div class="p-4 text-red-500">
+	Something went wrong loading the data. Please try refreshing.
+	</div>
+{:else}
+<div onerror={() => hasError = true}>
+  {#if browser}
   <!-- Featured Brands Section -->
-  <FeaturedBrands allBrands={carouselBrands} />
+	{#if carouselBrands.length > 0}
+		<FeaturedBrands allBrands={carouselBrands} />
+	{/if}
   
-  <!-- Brands Table Section -->
-  <div class="container max-w-screen-xl space-y-8 py-8">
-	<div class="space-y-3">
-	  <h2 class="text-2xl font-bold tracking-tighter md:text-3xl">All Brands</h2>
-	  <p class="text-sm text-muted-foreground font-mono">
-		Browse and filter our complete brand collection
-	  </p>
-	</div>
-  
-	<!-- Toolbar -->
-	<div class="flex items-center justify-between gap-4">
-	  <div class="flex items-center gap-2 flex-1">
-		<Input
-		  placeholder="Search brands..."
-		  bind:value={searchTerm}
-		  class="max-w-xs"
-		/>
-		<Button 
-		  variant="outline" 
-		  onclick={resetAll}
-		  class="shrink-0 gap-2"
-		>
-		  <RefreshIcon class="h-4 w-4" />
-		  Reset Filters
-		</Button>
-	  </div>
-  
-	  <!-- Column Visibility Dropdown -->
-	  <DropdownMenu>
-		<DropdownMenuTrigger>
-		  <Button 
-			variant="outline" 
-			size="sm"
-			class="ml-auto"
-		  >
-			Columns
-			<ChevronDownIcon class="ml-2 h-4 w-4" />
-		  </Button>
-		</DropdownMenuTrigger>
-		<DropdownMenuContent align="end">
-		  {#each columns as column}
-			<DropdownMenuItem onclick={() => toggleColumn(column.key)}>
-			  {#if column.visible}
-				<EyeIcon class="mr-2 h-4 w-4" />
-			  {:else}
-				<EyeOffIcon class="mr-2 h-4 w-4" />
-			  {/if}
-			  {column.label}
-			</DropdownMenuItem>
-		  {/each}
-		</DropdownMenuContent>
-	  </DropdownMenu>
-	</div>
-  
-	<div class="flex items-center gap-4">
-	  <div class="text-sm text-muted-foreground">
-		Showing {endIndex} of {data.total} brands
-	  </div>
-	  <select 
-  class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
-  focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
-  disabled:cursor-not-allowed disabled:opacity-50"
-  value={pagination.pageSize}
-  onchange={(e) => {
-    const newValue = e.currentTarget.value === 'all' 
-      ? data.total 
-      : parseInt(e.currentTarget.value);
-    pagination.pageSize = newValue;
-    pagination.page = 1;
-  }}
->
-		<option value="10">10 per page</option>
-		<option value="20">20 per page</option>
-		<option value="50">50 per page</option>
-		<option value="100">100 per page</option>
-		<option value="all">Show all</option>
-	  </select>
-	</div>
-  
-	<!-- Table -->
-	<Table>
-	  <TableHeader>
-		<TableRow>
-		  {#each columns as column}
-			{#if column.visible}
-			  <TableHead>
+	<!-- Brands Table Section -->
+	{#if data} 
+		<div class="container max-w-screen-xl space-y-8 py-8">
+			<div class="space-y-3">
+			<h2 class="text-2xl font-bold tracking-tighter md:text-3xl">All Brands</h2>
+			<p class="text-sm text-muted-foreground font-mono">
+				Browse and filter our complete brand collection
+			</p>
+			</div>
+		
+			<!-- Toolbar -->
+			<div class="flex items-center justify-between gap-4">
+			<div class="flex items-center gap-2 flex-1">
+				<Input
+					placeholder="Search brands..."
+					bind:value={searchTerm}
+					on:input={() => {
+					pagination.page = 1; // Reset to first page on search
+					}}
+					class="max-w-xs"
+				/>
 				<Button 
-				  variant="ghost" 
-				  size="sm"
-				  onclick={() => column.sortable && toggleSort(column.key)}
-				  class="hover:bg-muted flex items-center gap-2"
+				variant="outline" 
+				on:click={resetAll}
+				class="shrink-0 gap-2"
 				>
-				  {column.label}
-				  {#if column.sortable}
-					<ArrowUpDownIcon 
-					  class={`ml-2 h-4 w-4 transition-transform ${
-						sort.field === column.key 
-						  ? sort.direction === 'desc' 
-							? 'rotate-180' 
-							: ''
-						  : ''
-					  }`}
-					/>
-				  {/if}
+				<RefreshIcon class="h-4 w-4" />
+				Reset Filters
 				</Button>
-			  </TableHead>
-			{/if}
-		  {/each}
-		  <TableHead class="w-[50px]">
-			<span class="text-sm font-medium">Link</span>
-		  </TableHead>
-		</TableRow>
-	  </TableHeader>
-  
-	  <TableBody>
-		{#each data.brands as brand (brand.id)}
-		  <TableRow>
-			{#each columns as column}
-			  {#if column.visible}
-				<TableCell>
-				  {#if column.key === 'brandName'}
-					<div>
-					  <div class="font-medium">{brand.brandName}</div>
-					</div>
-				  {:else if column.key === 'mainCategory'}
-					<div class="text-sm flex items-center gap-2">
-					  {#if brand.mainCategory}
-						{@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
-						{#if maybeIcon}
-							<div class={maybeIcon.color}>
-								{#if maybeIcon.icon}
-								<maybeIcon.icon size={16} />
-								{/if}
-						  	</div>
-						{/if}
-					  {/if}
-					  <div>{brand.mainCategory}</div>
-					</div>
-				  {:else if column.key === 'subCategory'}
-					<div class="text-sm flex items-center gap-2">
-					  {#if brand.subCategory}
-						{@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
-						{#if maybeIcon}
-						<div class={maybeIcon.color}>
-							{#if maybeIcon.icon}
-							  <maybeIcon.icon size={16} />
-							{/if}
-						  </div>
-						{/if}
-					  {/if}
-					  <div>{brand.subCategory}</div>
-					</div>
-				  {:else if column.key === 'brandDescription'}
-					<div class="text-sm text-muted-foreground">{brand.brandDescription}</div>
-				  {:else}
-					{brand[column.key]}
-				  {/if}
-				</TableCell>
-			  {/if}
-			{/each}
-			<TableCell class="w-[50px]">
-			  {#if brand.brandWebsite}
-				<a
-				  href={brand.brandWebsite}
-				  target="_blank" 
-				  rel="noopener noreferrer"
-				  class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
-				  title="Visit website"
+			</div>
+		
+			<!-- Column Visibility Dropdown -->
+			<DropdownMenu>
+				<DropdownMenuTrigger>
+				<Button 
+					variant="outline" 
+					size="sm"
+					class="ml-auto"
 				>
-				  <GlobeIcon class="h-4 w-4" />
-				</a>
-			  {/if}
-			</TableCell>
-		  </TableRow>
-		{/each}
-	  </TableBody>
-	</Table>
-  
-	<!-- Pagination -->
-	<div class="flex items-center justify-end">
-	  <div class="flex items-center gap-2">
-		<Button
-		  variant="outline"
-		  size="sm"
-		  disabled={pagination.page === 1}
-		  onclick={() => changePage(pagination.page - 1)}
+					Columns
+					<ChevronDownIcon class="ml-2 h-4 w-4" />
+				</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+				{#each columns as column}
+					<DropdownMenuItem on:click={() => toggleColumn(column.key)}>
+					{#if column.visible}
+						<EyeIcon class="mr-2 h-4 w-4" />
+					{:else}
+						<EyeOffIcon class="mr-2 h-4 w-4" />
+					{/if}
+					{column.label}
+					</DropdownMenuItem>
+				{/each}
+				</DropdownMenuContent>
+			</DropdownMenu>
+			</div>
+		
+			<div class="flex items-center gap-4">
+			<div class="text-sm text-muted-foreground">
+				Showing {endIndex} of {data.total} brands
+			</div>
+			<select 
+		class="h-10 w-[160px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background 
+		focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+		disabled:cursor-not-allowed disabled:opacity-50"
+		value={pagination.pageSize}
+		onchange={(e) => {
+			const newValue = e.currentTarget.value === 'all' 
+			? data.total 
+			: parseInt(e.currentTarget.value);
+			pagination.pageSize = newValue;
+			pagination.page = 1;
+		}}
 		>
-		  Previous
-		</Button>
-  
-		{#each pageNumbers as pageNum}
-		  {#if pageNum === '...'}
-			<span class="px-2">...</span>
-		  {:else if typeof pageNum === 'number'}
-			<Button
-			  variant={pageNum === pagination.page ? 'default' : 'outline'}
-			  size="sm"
-			  onclick={() => changePage(pageNum)}
-			>
-			  {pageNum}
-			</Button>
-		  {/if}
-		{/each}
-  
-		<Button
-		  variant="outline"
-		  size="sm"
-		  disabled={pagination.page === totalPages}
-		  onclick={() => changePage(pagination.page + 1)}
-		>
-		  Next
-		</Button>
-	  </div>
-	</div>
-  </div>
+				<option value="10">10 per page</option>
+				<option value="20">20 per page</option>
+				<option value="50">50 per page</option>
+				<option value="100">100 per page</option>
+				<option value="all">Show all</option>
+			</select>
+			</div>
+		
+			<!-- Table -->
+			<Table>
+			<TableHeader>
+				<TableRow>
+				{#each columns as column}
+					{#if column.visible}
+					<TableHead>
+						<Button 
+						variant="ghost" 
+						size="sm"
+						on:click={() => column.sortable && toggleSort(column.key)}
+						class="hover:bg-muted flex items-center gap-2"
+						>
+						{column.label}
+						{#if column.sortable}
+							<ArrowUpDownIcon 
+							class={`ml-2 h-4 w-4 transition-transform ${
+								sort.field === column.key 
+								? sort.direction === 'desc' 
+									? 'rotate-180' 
+									: ''
+								: ''
+							}`}
+							/>
+						{/if}
+						</Button>
+					</TableHead>
+					{/if}
+				{/each}
+				<TableHead class="w-[50px]">
+					<span class="text-sm font-medium">Link</span>
+				</TableHead>
+				</TableRow>
+			</TableHeader>
+		
+			<TableBody>
+				{#each data.brands as brand (brand.id)}
+				<TableRow>
+					{#each columns as column}
+					{#if column.visible}
+						<TableCell>
+						{#if column.key === 'brandName'}
+							<div>
+							<div class="font-medium">{brand.brandName}</div>
+							</div>
+						{:else if column.key === 'mainCategory'}
+							<div class="text-sm flex items-center gap-2">
+							{#if brand.mainCategory}
+								{@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
+								{#if maybeIcon}
+									<div class={maybeIcon.color}>
+										{#if maybeIcon.icon}
+										<maybeIcon.icon size={16} />
+										{/if}
+									</div>
+								{/if}
+							{/if}
+							<div>{brand.mainCategory}</div>
+							</div>
+						{:else if column.key === 'subCategory'}
+							<div class="text-sm flex items-center gap-2">
+							{#if brand.subCategory}
+								{@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
+								{#if maybeIcon}
+								<div class={maybeIcon.color}>
+									{#if maybeIcon.icon}
+									<maybeIcon.icon size={16} />
+									{/if}
+								</div>
+								{/if}
+							{/if}
+							<div>{brand.subCategory}</div>
+							</div>
+						{:else if column.key === 'brandDescription'}
+							<div class="text-sm text-muted-foreground">{brand.brandDescription}</div>
+						{:else}
+							{brand[column.key]}
+						{/if}
+						</TableCell>
+					{/if}
+					{/each}
+					<TableCell class="w-[50px]">
+					{#if brand.brandWebsite}
+						<a
+						href={brand.brandWebsite}
+						target="_blank" 
+						rel="noopener noreferrer"
+						class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
+						title="Visit website"
+						>
+						<GlobeIcon class="h-4 w-4" />
+						</a>
+					{/if}
+					</TableCell>
+				</TableRow>
+				{/each}
+			</TableBody>
+			</Table>
+		
+			<!-- Pagination -->
+			<div class="flex items-center justify-end">
+			<div class="flex items-center gap-2">
+				<Button
+				variant="outline"
+				size="sm"
+				disabled={pagination.page === 1}
+				on:click={() => changePage(pagination.page - 1)}
+				>
+				Previous
+				</Button>
+		
+				{#each pageNumbers as pageNum}
+				{#if pageNum === '...'}
+					<span class="px-2">...</span>
+				{:else if typeof pageNum === 'number'}
+					<Button
+					variant={pageNum === pagination.page ? 'default' : 'outline'}
+					size="sm"
+					on:click={() => changePage(pageNum)}
+					>
+					{pageNum}
+					</Button>
+				{/if}
+				{/each}
+		
+				<Button
+				variant="outline"
+				size="sm"
+				disabled={pagination.page === totalPages}
+				on:click={() => changePage(pagination.page + 1)}
+				>
+				Next
+				</Button>
+			</div>
+			</div>
+		</div>
+	{/if}
+  {/if}
+</div>
+{/if}
