@@ -10,7 +10,6 @@
 	import { getCategoryIcon } from '$lib/utils/category-icons';
 	import { browser } from '$app/environment';
 	import FeaturedBrands from "$lib/components/featured-brands.svelte";
-	import { onError } from 'svelte';
   
 	// Icon imports
 	import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
@@ -19,8 +18,6 @@
 	import EyeOffIcon from '~icons/mdi/eye-off';
 	import RefreshIcon from '~icons/mdi/refresh';
 	import GlobeIcon from '~icons/mdi/web';
-
-	let hasError = $state(false);
 
 	let { data } = $props<{ data: PageData }>();
   
@@ -52,11 +49,11 @@
 		}
 	})) ?? []);
   
-	let columns = $state([
+	let columns = $state<ColumnDef[]>([
 	  { key: 'brandName', label: 'Brand', visible: true, sortable: true },
 	  { key: 'mainCategory', label: 'Category', visible: true, sortable: true },
-	  { key: 'subCategory', label: 'Products', visible: true, sortable: true },
-	  { key: 'brandDescription', label: 'Description', visible: true, sortable: false }
+	  { key: 'brandWebsite', label: 'Website', visible: true, sortable: true },
+	  { key: 'brandDescription', label: 'Description', visible: true, sortable: true }
 	]);
   
 	let pagination = $state({
@@ -64,7 +61,7 @@
 		pageSize: Number($page.url.searchParams.get('pageSize')) || 10
 	});
 
-	let sort = $state({
+	let sort = $state<SortState>({
 		field: ($page.url.searchParams.get('sortField') as keyof Brand) || 'brandName',
 		direction: ($page.url.searchParams.get('sortDirection') as 'asc' | 'desc') || 'asc'
 	});
@@ -160,26 +157,15 @@
 		sort.direction = 'asc';
 	  }
 	}
-
-	onError((error) => {
-		hasError = true;
-		console.error('Caught error:', error);
-	  });
   </script>
 
-{#if hasError}
-	<div class="p-4 text-red-500">
-	Something went wrong loading the data. Please try refreshing.
-	</div>
-{:else}
-<div onerror={() => hasError = true}>
-  {#if browser}
-  <!-- Featured Brands Section -->
+
+<!-- Featured Brands Section -->
 	{#if carouselBrands.length > 0}
 		<FeaturedBrands allBrands={carouselBrands} />
 	{/if}
   
-	<!-- Brands Table Section -->
+<!-- Brands Table Section -->
 	{#if data} 
 		<div class="container max-w-screen-xl space-y-8 py-8">
 			<div class="space-y-3">
@@ -298,68 +284,56 @@
 			</TableHeader>
 		
 			<TableBody>
-				{#each data.brands as brand (brand.id)}
-				<TableRow>
-					{#each columns as column}
-					{#if column.visible}
-						<TableCell>
-						{#if column.key === 'brandName'}
-							<div>
-							<div class="font-medium">{brand.brandName}</div>
-							</div>
-						{:else if column.key === 'mainCategory'}
-							<div class="text-sm flex items-center gap-2">
-							{#if brand.mainCategory}
-								{@const maybeIcon = getCategoryIcon(brand.mainCategory, true)}
-								{#if maybeIcon}
-									<div class={maybeIcon.color}>
-										{#if maybeIcon.icon}
-										<maybeIcon.icon size={16} />
-										{/if}
-									</div>
-								{/if}
-							{/if}
-							<div>{brand.mainCategory}</div>
-							</div>
-						{:else if column.key === 'subCategory'}
-							<div class="text-sm flex items-center gap-2">
-							{#if brand.subCategory}
-								{@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
-								{#if maybeIcon}
-								<div class={maybeIcon.color}>
-									{#if maybeIcon.icon}
-									<maybeIcon.icon size={16} />
-									{/if}
-								</div>
-								{/if}
-							{/if}
-							<div>{brand.subCategory}</div>
-							</div>
-						{:else if column.key === 'brandDescription'}
-							<div class="text-sm text-muted-foreground">{brand.brandDescription}</div>
-						{:else}
-							{brand[column.key]}
-						{/if}
-						</TableCell>
-					{/if}
-					{/each}
-					<TableCell class="w-[50px]">
-					{#if brand.brandWebsite}
-						<a
-						href={brand.brandWebsite}
-						target="_blank" 
-						rel="noopener noreferrer"
-						class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
-						title="Visit website"
-						>
-						<GlobeIcon class="h-4 w-4" />
-						</a>
-					{/if}
-					</TableCell>
-				</TableRow>
-				{/each}
-			</TableBody>
-			</Table>
+  {#each data.brands as brand (brand.id)}
+    <TableRow>
+      {#each columns as column}
+        {#if column.visible}
+          <TableCell>
+            {#if column.key === 'mainCategory'}
+              <div class="space-y-0.5 max-w-[250px]">
+                <div class="text-sm text-gray-500">
+                  {brand.mainCategory}
+                </div>
+                {#if brand.subCategory}
+                  {@const maybeIcon = getCategoryIcon(brand.subCategory, false)}
+                  <div class="flex items-center gap-1.5 text-sm">
+                    {#if maybeIcon}
+                      <div class="text-gray-600">
+                        <svelte:component this={maybeIcon.icon} size={16} />
+                      </div>
+                    {/if}
+                    <span class="text-gray-900">
+                      {brand.subCategory}
+                    </span>
+                  </div>
+                {/if}
+              </div>
+            {:else if column.key === 'brandName'}
+              <div>
+                <div class="font-medium">{brand.brandName}</div>
+                {#if brand.brandDescription}
+                  <div class="text-sm text-muted-foreground">{brand.brandDescription}</div>
+                {/if}
+              </div>
+            {:else if column.key === 'brandWebsite'}
+              <a 
+                href={brand.brandWebsite} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="text-blue-600 hover:underline"
+              >
+                {brand.brandWebsite?.replace(/^https?:\/\/(www\.)?/, '')}
+              </a>
+            {:else}
+              {brand[column.key]}
+            {/if}
+          </TableCell>
+        {/if}
+      {/each}
+    </TableRow>
+  {/each}
+</TableBody>
+</Table>
 		
 			<!-- Pagination -->
 			<div class="flex items-center justify-end">
@@ -399,6 +373,3 @@
 			</div>
 		</div>
 	{/if}
-  {/if}
-</div>
-{/if}
