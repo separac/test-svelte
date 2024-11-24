@@ -157,7 +157,7 @@ export const POST: RequestHandler = async ({ request }) => {
 1. **Styling**
    - Use Tailwind's utility classes
    - Follow shadcn-svelte component patterns
-   - Implement proper dark mode support
+   - Use unplug-icons to create nicely and modern designed pages.
    - Use proper color contrasts
    - Implement proper responsive design
 
