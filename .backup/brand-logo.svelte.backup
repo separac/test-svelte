@@ -1,10 +1,21 @@
 <!-- src/lib/components/brand-logo.svelte -->
 <script lang="ts">
     import { cn } from '$lib/utils';
-    import type { BrandEntity } from '$lib/types';
     
     let { brand, size = 'md' } = $props<{
-      brand: BrandEntity;
+      brand: {
+        id: number;
+        brandName: string;
+        mainCategory: string | null;
+        subCategory: string | null;
+        brandDescription: string;
+        brandWebsite: string | null;
+        logo?: {
+          type: 'simple-icon' | 'custom-svg' | 'wordmark';
+          value?: string;
+          backgroundColor?: string;
+        };
+      };
       size?: 'sm' | 'md' | 'lg';
     }>();
   

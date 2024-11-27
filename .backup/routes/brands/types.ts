@@ -1,19 +1,16 @@
 // src/routes/brands/types.ts
+import type { PageServerData } from './$types';
+
 export interface Brand {
-  id: string;
-  brandName: string;
+  id: number;  // Keep as number to match server
   mainCategory: string | null;
   subCategory: string | null;
-  brandDescription: string | null;
+  brandName: string;
+  brandDescription: string;
   brandWebsite: string | null;
 }
 
-export interface CarouselBrand {
-  id: string;
-  name: string;
-  category: string;
-  website: string;
-  description?: string | null;
+export interface CarouselBrand extends Brand {
   logo: {
     type: 'simple-icon' | 'custom-svg' | 'wordmark';
     value?: string;
@@ -23,7 +20,7 @@ export interface CarouselBrand {
 
 export interface PageData {
   brands: Brand[];
-  featuredBrands: Brand[];
+  features: Brand[];
   total: number;
 }
 

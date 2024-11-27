@@ -6,7 +6,7 @@
 	import { Input } from "$lib/components/ui/input";
 	import { Button } from "$lib/components/ui/button";
 	import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
-	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from '../types';
+	import type { PageData, Brand, SortState, ColumnDef, PaginationState } from '../../../../../backup/types';
 	import { getCategoryIcon } from '$lib/utils/category-icons';
 
 	// New icon imports

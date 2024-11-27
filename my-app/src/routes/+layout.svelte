@@ -1,12 +1,65 @@
 <script lang="ts">
-    import '../app.css';
-    import IconMenu from '~icons/lucide/menu';
-    import * as Drawer from '$lib/components/ui/drawer';
-    import { Button } from '$lib/components/ui/button';
-    import { buttonVariants } from '$lib/components/ui/button/variants';
+	import '../app.css';
+	import IconMenu from '~icons/lucide/menu';
+	import * as Drawer from '$lib/components/ui/drawer';
+	import { Button } from '$lib/components/ui/button';
+	import { buttonVariants } from '$lib/components/ui/button/variants';
+	import { Card } from '$lib/components/ui/card';
+	import { 
+		Compass, 
+		Database, 
+		Grid, 
+		Heart,
+		ChevronDown 
+	} from 'lucide-svelte';
 
-    let { children } = $props();
-    let scrollY: number = $state(0);
+	let { children } = $props();
+	let scrollY = $state(0);
+	let isExpanded = $state(false);
+  	let hoveredIndex = $state<number | null>(null);
+
+	const subPages = [
+		{
+		label: 'Featured Highlights',
+		href: '/explore',
+		description: 'Discover curated BIFL brand highlights and new additions',
+		icon: Compass
+		},
+		{
+		label: 'Brands Database',
+		href: '/explore/database',
+		description: 'Browse our comprehensive database of BIFL brands',
+		icon: Database
+		},
+		{
+		label: 'Categories',
+		href: '/explore/categories',
+		description: 'Find brands by product categories',
+		icon: Grid
+		},
+		{
+		label: 'Community Favorites',
+		href: '/explore/community-favorites',
+		description: 'Top-rated brands by the BIFL community',
+		icon: Heart
+		}
+	];
+
+	// Event handlers using runes
+	function handleMouseEnter() {
+		isExpanded = true;
+	}
+
+	function handleMouseLeave() {
+		isExpanded = false;
+	}
+
+	function handleItemHover(index: number) {
+		hoveredIndex = index;
+	}
+
+	// Derived value for rotation
+	let isRotated = $derived(isExpanded);
 </script>
 
 <svelte:window bind:scrollY />
@@ -44,11 +97,83 @@
 				</div>
 			</a> 
 
-			<!-- Desktop Navigation -->
+			<!-- Desktop Navigation NEW -->
 			<div class="hidden md:flex items-center space-x-4">
-				<Button size="sm" variant="ghost" class="text-white hover:font-bold" href="/brands">
-					explore brands
-				</Button>
+				<div class="relative" role="navigation">
+					<!-- Main Navigation Button -->
+					<Button 
+						size="sm" 
+						variant="ghost" 
+						class="text-white hover:font-bold group flex items-center gap-2" 
+						on:pointerenter={handleMouseEnter}
+						aria-expanded={isExpanded}
+						aria-haspopup="true"
+					>
+						explore brands
+						<ChevronDown
+							class="h-4 w-4 transition-transform duration-300"
+							style="transform: rotate({isExpanded ? 180 : 0}deg)"
+						/>
+					</Button>
+					
+					<!-- Dropdown Menu -->
+					{#if isExpanded}
+						<div 
+							class="absolute top-full left-0 w-screen max-w-2xl"
+							on:pointerleave={handleMouseLeave}
+							role="menu"
+							aria-orientation="vertical"
+						>
+							<Card class="bg-black border-x border-b border-gray-800 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]">
+								<div class="p-6 grid grid-cols-2 gap-4">
+									{#each subPages as page, index}
+										{@const isHovered = hoveredIndex === index}
+										<a
+											href={page.href}
+											class="group relative p-4 rounded-lg transition-all duration-300"
+											style:background={isHovered ? 'linear-gradient(to right, rgb(26, 26, 26), rgb(38, 38, 38))' : ''}
+											on:pointerenter={() => handleItemHover(index)}
+											on:pointerleave={() => handleItemHover(null)}
+											role="menuitem"
+										>
+											<div class="flex items-center gap-3 mb-2">
+												<div 
+													class="p-2 rounded-lg transition-colors duration-300" 
+													style:background-color={isHovered ? 'rgb(30, 58, 138)' : 'rgb(31, 41, 55)'}
+													style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(156, 163, 175)'}
+												>
+													<svelte:component 
+														this={page.icon} 
+														class="h-5 w-5"
+													/>
+												</div>
+												<h3 
+													class="font-medium transition-colors duration-300"
+													style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(243, 244, 246)'}
+												>
+													{page.label}
+												</h3>
+											</div>
+											
+											<p 
+												class="text-sm ml-11 transition-colors duration-300"
+												style:color={isHovered ? 'rgb(209, 213, 219)' : 'rgb(156, 163, 175)'}
+											>
+												{page.description}
+											</p>
+											
+											<div 
+												class="absolute inset-0 border border-transparent rounded-lg transition-colors duration-300"
+												style:border-color={isHovered ? 'rgb(30, 64, 175)' : 'transparent'}
+											/>
+										</a>
+									{/each}
+								</div>
+							</Card>
+						</div>
+					{/if}
+				</div>
+			
 				<Button size="sm" variant="ghost" class="text-white hover:font-bold" href="/products">
 					explore products
 				</Button>
@@ -86,28 +211,45 @@
 									</svg>
 								</Drawer.Title>
 							</Drawer.Header>
-							<!-- Rest of drawer content -->
+							<!-- In the mobile drawer content -->
 							<div class="flex flex-col space-y-2">
+								<!-- Explore Brands with sub-items -->
+								<div class="space-y-2">
 								<Button 
 									variant="ghost" 
 									class="w-full justify-start font-mono text-white hover:font-bold" 
-									href="/brands"
 								>
 									explore brands
 								</Button>
+								<!-- Sub-pages -->
+								<div class="ml-4 space-y-2">
+									{#each subPages as page}
+									<Button 
+										variant="ghost" 
+										class="w-full justify-start font-mono text-sm text-white/70 hover:text-white hover:font-bold" 
+										href={page.href}
+									>
+										<svelte:component this={page.icon} class="h-4 w-4 mr-2" />
+										{page.label}
+									</Button>
+									{/each}
+								</div>
+								</div>
+							
+								<!-- Other navigation items -->
 								<Button 
-									variant="ghost" 
-									class="w-full justify-start font-mono text-white hover:font-bold" 
-									href="/products"
+								variant="ghost" 
+								class="w-full justify-start font-mono text-white hover:font-bold" 
+								href="/products"
 								>
-									explore products
+								explore products
 								</Button>
 								<Button 
-									variant="ghost" 
-									class="w-full justify-start font-mono text-white hover:font-bold" 
-									href="/contact"
+								variant="ghost" 
+								class="w-full justify-start font-mono text-white hover:font-bold" 
+								href="/contact"
 								>
-									contact
+								contact
 								</Button>
 							</div>
 						</div>

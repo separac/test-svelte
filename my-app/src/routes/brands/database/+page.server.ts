@@ -4,7 +4,7 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { brands, categories } from '$lib/server/db/schema';
 import { eq, ilike, or, desc, asc, count } from 'drizzle-orm';
-// import type { Brand } from './types';
+import type { Brand } from '../types';
 
 export const load: PageServerLoad = async ({ url }) => {
     try {
@@ -34,13 +34,12 @@ export const load: PageServerLoad = async ({ url }) => {
                 subCategory: categories.subcategory,
                 brandName: brands.name,
                 brandDescription: brands.description,
-                brandWebsite: brands.website
+                brandWebsite: brands.website,
             })
             .from(brands)
-            .leftJoin(categories, eq(brands.category_id, categories.id));
-
-            // console.log('Server featuredBrands:', featuredBrands); // Debug log
-
+            .leftJoin(categories, eq(brands.category_id, categories.id))
+            .limit(10)  // Get enough for carousel
+            .$dynamic();  // Make the query dynamic for random selection
 
         // Get total count
         const [{ value: totalBrands }] = await db
@@ -78,11 +77,11 @@ export const load: PageServerLoad = async ({ url }) => {
 
         return {
             brands: allBrands,
-            features: featuredBrands,
+            featuredBrands,
             total: totalBrands
         };
     } catch (err) {
         console.error('Error in +page.server.ts load function:', err);
-        throw error(500, 'Failed to load brands');
+        throw error(500, 'Internal Server Error');
     }
 };

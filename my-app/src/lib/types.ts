@@ -15,3 +15,17 @@ export interface Brand {
   description?: string;
   logo: BrandLogo;
 }
+
+export interface BrandEntity {
+  id: number;
+  brandName: string;
+  mainCategory: string | null;
+  subCategory: string | null;
+  brandDescription: string;
+  brandWebsite: string | null;
+  logo?: {
+    type: 'simple-icon' | 'custom-svg' | 'wordmark';
+    value?: string;
+    backgroundColor?: string;
+  };
+}
