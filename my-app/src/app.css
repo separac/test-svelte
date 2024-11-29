@@ -71,5 +71,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-y: scroll; /* Always show scrollbar */
   }
+}
+
+html {
+  scrollbar-gutter: stable; /* Forces a consistent scrollbar space */
 }
