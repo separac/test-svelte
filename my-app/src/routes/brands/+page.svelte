@@ -15,10 +15,10 @@
   
 <!-- HERE STARTS THE PAGE -->
 
-<div class="container max-w-screen-xl space-y-8 py-8">
+<div class="container max-w-screen-xl space-y-8 py-8 relative z-1">
 	<div class="space-y-3">
-	  <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Brands</h1>
-	  <p class="text-sm text-muted-foreground font-mono">
+	  <h1 class="text-3xl font-bold font-mono md:text-4xl">Explore Brands</h1>
+	  <p class="text-m font-mono text-muted-foreground">
 	  Discover all our curated buy it for life brands.
 	  </p>
 	</div>
@@ -32,7 +32,7 @@
 		<div class="mt-12">
 			<div class="flex items-center gap-2 mb-6">
 				<ArrowUpIcon class="h-5 w-5"></ArrowUpIcon>
-				<h2 class="text-xl font-semibold">discover recommended brands</h2>
+				<h2 class="text-xl font-semibold font-mono">Discover recommended brands</h2>
 			</div>
 			<BrandCarousel brands={data.features ?? []} />
 		</div>
@@ -41,7 +41,7 @@
 		<div class="mt-12">
 			<div class="flex items-center gap-2 mb-6">
 				<SortAlphabetical class="h-5 w-5"></SortAlphabetical>
-				<h2 class="text-xl font-semibold">browse all brands by letter</h2>
+				<h2 class="text-xl font-semibold font-mono">Browse all brands by letter</h2>
 			</div>
 			
 		</div>

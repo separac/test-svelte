@@ -21,27 +21,27 @@
 	const subPages = [
 		{
 		label: 'Featured Highlights',
-		href: '/explore',
+		href: '/brands',
 		description: 'Discover curated BIFL brand highlights and new additions',
 		icon: Compass
 		},
 		{
-		label: 'Brands Database',
-		href: '/explore/database',
+		label: 'by Letter',
+		href: '/brands/letter',
 		description: 'Browse our comprehensive database of BIFL brands',
 		icon: Database
 		},
 		{
-		label: 'Categories',
-		href: '/explore/categories',
+		label: 'by Category',
+		href: '/brands/category',
 		description: 'Find brands by product categories',
 		icon: Grid
 		},
 		{
-		label: 'Community Favorites',
-		href: '/explore/community-favorites',
-		description: 'Top-rated brands by the BIFL community',
-		icon: Heart
+		label: 'Brands Database',
+		href: '/brands/database',
+		description: 'Browse our comprehensive database of BIFL brands',
+		icon: Database
 		}
 	];
 
@@ -67,9 +67,9 @@
 	<link rel="icon" type="image/svg" href="/favicon.png" />
 </svelte:head>
 
-<div class="flex min-h-dvh flex-col">
+<div class="flex min-h-dvh flex-col pt-16"> <!-- Added pt-16 -->
 	<!-- Header und Navigation -->
-	<header class="sticky top-0 w-full mx-auto border-border bg-black {scrollY > 0 ? 'border-b' : ''}">
+	<header class="fixed top-0 left-0 right-0 h-16 bg-black z-[9999]">
 		<nav class="container flex w-full max-w-screen-xl items-center justify-between py-4 font-mono">
 			<!-- Alternative Logo via TEXT only
 			<a href="/" class="flex items-center">
@@ -98,81 +98,82 @@
 			</a> 
 
 			<!-- Desktop Navigation NEW -->
-			<div class="hidden md:flex items-center space-x-4">
-				<div class="relative" role="navigation">
-					<!-- Main Navigation Button -->
-					<Button 
-						size="sm" 
-						variant="ghost" 
-						class="text-white hover:font-bold group flex items-center gap-2" 
-						on:pointerenter={handleMouseEnter}
-						aria-expanded={isExpanded}
-						aria-haspopup="true"
-					>
-						explore brands
-						<ChevronDown
-							class="h-4 w-4 transition-transform duration-300"
-							style="transform: rotate({isExpanded ? 180 : 0}deg)"
-						/>
-					</Button>
-					
-					<!-- Dropdown Menu -->
-					{#if isExpanded}
-						<div 
-							class="absolute top-full left-0 w-screen max-w-2xl"
-							on:pointerleave={handleMouseLeave}
-							role="menu"
-							aria-orientation="vertical"
-						>
-							<Card class="bg-black border-x border-b border-gray-800 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]">
-								<div class="p-6 grid grid-cols-2 gap-4">
-									{#each subPages as page, index}
-										{@const isHovered = hoveredIndex === index}
-										<a
-											href={page.href}
-											class="group relative p-4 rounded-lg transition-all duration-300"
-											style:background={isHovered ? 'linear-gradient(to right, rgb(26, 26, 26), rgb(38, 38, 38))' : ''}
-											on:pointerenter={() => handleItemHover(index)}
-											on:pointerleave={() => handleItemHover(null)}
-											role="menuitem"
-										>
-											<div class="flex items-center gap-3 mb-2">
-												<div 
-													class="p-2 rounded-lg transition-colors duration-300" 
-													style:background-color={isHovered ? 'rgb(30, 58, 138)' : 'rgb(31, 41, 55)'}
-													style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(156, 163, 175)'}
-												>
-													<svelte:component 
-														this={page.icon} 
-														class="h-5 w-5"
-													/>
-												</div>
-												<h3 
-													class="font-medium transition-colors duration-300"
-													style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(243, 244, 246)'}
-												>
-													{page.label}
-												</h3>
+			<div class="hidden md:flex items-center space-x-4 relative z-[9999]">
+							<div class="relative" role="navigation">
+								<!-- Main Navigation Button -->
+								<Button 
+									size="sm" 
+									variant="ghost" 
+									class="text-white hover:font-bold group flex items-center gap-2" 
+									onpointerenter={() => isExpanded = true}
+									aria-expanded={isExpanded}
+									aria-haspopup="true"
+								>
+									explore brands
+									<ChevronDown
+										class="h-4 w-4 transition-transform duration-300"
+										style="transform: rotate({isExpanded ? 180 : 0}deg)"
+									/>
+								</Button>
+								
+								<!-- Dropdown Menu -->
+								{#if isExpanded}
+									<div 
+										class="absolute top-full left-0 w-screen max-w-2xl z-[10000]"
+										onpointerleave={() => isExpanded = false}
+										role="menu"
+										aria-orientation="vertical"
+									>
+										<Card class="bg-black border-x border-b border-gray-800 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]">
+											<div class="p-6 grid grid-cols-2 gap-4">
+												{#each subPages as page, index}
+													{@const isHovered = hoveredIndex === index}
+													<a
+														href={page.href}
+														class="group relative p-4 rounded-lg transition-all duration-300"
+														style:background={isHovered ? 'linear-gradient(to right, rgb(26, 26, 26), rgb(38, 38, 38))' : ''}
+														onpointerenter={() => hoveredIndex = index}
+														onpointerleave={() => hoveredIndex = -1}
+														onclick={() => isExpanded = false}
+														role="menuitem"
+													>
+														<div class="flex items-start gap-3 mb-2">
+															<div 
+																class="p-2 rounded-lg transition-colors duration-300" 
+																style:background-color={isHovered ? 'rgb(30, 58, 138)' : 'rgb(31, 41, 55)'}
+																style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(156, 163, 175)'}
+															>
+																{#if page.icon}
+																	<page.icon class="h-5 w-5" />
+																{/if}
+															</div>
+															<div class="flex flex-col">
+																<h3 
+																	class="font-medium transition-colors duration-300"
+																	style:color={isHovered ? 'rgb(96, 165, 250)' : 'rgb(243, 244, 246)'}
+																>
+																	{page.label}
+																</h3>
+																<p 
+																	class="text-sm transition-colors duration-300"
+																	style:color={isHovered ? 'rgb(209, 213, 219)' : 'rgb(156, 163, 175)'}
+																>
+																	{page.description}
+																</p>
+															</div>
+														</div>
+														
+														<div 
+															class="absolute inset-0 border border-transparent rounded-lg transition-colors duration-300"
+															style:border-color={isHovered ? 'rgb(30, 64, 175)' : 'transparent'}
+														/>
+													</a>
+												{/each}
 											</div>
-											
-											<p 
-												class="text-sm ml-11 transition-colors duration-300"
-												style:color={isHovered ? 'rgb(209, 213, 219)' : 'rgb(156, 163, 175)'}
-											>
-												{page.description}
-											</p>
-											
-											<div 
-												class="absolute inset-0 border border-transparent rounded-lg transition-colors duration-300"
-												style:border-color={isHovered ? 'rgb(30, 64, 175)' : 'transparent'}
-											/>
-										</a>
-									{/each}
-								</div>
-							</Card>
-						</div>
-					{/if}
-				</div>
+										</Card>
+									</div>
+								{/if}
+							</div>
 			
 				<Button size="sm" variant="ghost" class="text-white hover:font-bold" href="/products">
 					explore products
@@ -271,7 +272,7 @@
 			<div class="container max-w-screen-xl">
 				<div class="h-4 w-full text-white flex items-center justify-center text-xs tracking-[0.2rem] overflow-hidden whitespace-nowrap">
 					{#each Array(75) as _}
-						<span class="inline-block mx-1">✱</span>
+						<span class="inline-block mx-1">���</span>
 					{/each}
 				</div>
 			</div>

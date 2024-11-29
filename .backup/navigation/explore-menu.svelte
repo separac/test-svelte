@@ -33,19 +33,19 @@
     const subPages: SubPage[] = [
       {
         label: 'Featured Highlights',
-        href: '/explore',
+        href: '/brands',
         description: 'Discover curated BIFL brand highlights and new additions',
         icon: Compass
       },
       {
         label: 'Brands Database',
-        href: '/explore/database',
+        href: '/brands/database',
         description: 'Browse our comprehensive database of BIFL brands',
         icon: Database
       },
       {
         label: 'Categories',
-        href: '/explore/categories',
+        href: '/brands/categories',
         description: 'Find brands by product categories',
         icon: Grid
       }/**,

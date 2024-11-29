@@ -176,10 +176,10 @@
   });
 </script>
 
-<div class="container max-w-screen-xl space-y-8 py-8">
+<div class="container max-w-screen-xl space-y-8 py-8 relative z-[1]">
   <div class="space-y-3">
-    <h1 class="text-3xl font-bold tracking-tighter md:text-4xl">Explore Products</h1>
-    <p class="text-sm text-muted-foreground font-mono">
+    <h1 class="text-3xl font-bold font-mono md:text-4xl">Explore Products</h1>
+    <p class="text-m text-muted-foreground font-mono">
       Browse and filter our curated selection of buy it for life products
     </p>
   </div>
@@ -253,7 +253,7 @@
     </select>
   </div>
   <!-- Table -->
-  <Table>
+  <Table class="relative z-[1]">
     <TableHeader>
       <TableRow>
         {#each columns as column}
