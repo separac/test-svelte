@@ -68,7 +68,7 @@ const config: Config = {
 			},
 			fontFamily: {
 				sans: ['InterVariable', ...fontFamily.sans],
-				mono: ['Hack', ...fontFamily.mono]
+				mono: ['Jetbrains Mono', ...fontFamily.mono]
 			},
 			keyframes: {
 				"accordion-down": {

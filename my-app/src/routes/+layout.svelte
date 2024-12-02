@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { buttonVariants } from '$lib/components/ui/button/variants';
 	import { Card } from '$lib/components/ui/card';
+	import PlusIcon from '~icons/heroicons/plus';
 	import { 
 		Compass, 
 		Database, 
@@ -104,12 +105,12 @@
 								<Button 
 									size="sm" 
 									variant="ghost" 
-									class="text-white hover:font-bold group flex items-center gap-2" 
+									class="text-white hover:font-bold group flex items-center gap-2 text-sm" 
 									onpointerenter={() => isExpanded = true}
 									aria-expanded={isExpanded}
 									aria-haspopup="true"
 								>
-									explore brands
+									Explore Brands
 									<ChevronDown
 										class="h-4 w-4 transition-transform duration-300"
 										style="transform: rotate({isExpanded ? 180 : 0}deg)"
@@ -175,11 +176,12 @@
 								{/if}
 							</div>
 			
-				<Button size="sm" variant="ghost" class="text-white hover:font-bold" href="/products">
-					explore products
+				<Button size="sm" variant="ghost" class="text-white text-sm" href="/products">
+					Explore Products
 				</Button>
-				<Button size="sm" variant="ghost" class="text-white hover:font-bold" href="/contact">
-					contact
+				<Button size="sm" variant="default" class="text-white text-sm bg-blue-600 hover:bg-blue-800" href="/submit-product">
+					<PlusIcon class="h-4 w-4" />
+						Submit Product
 				</Button>
 			</div>
 
