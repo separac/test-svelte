@@ -124,7 +124,7 @@
 										role="menu"
 										aria-orientation="vertical"
 									>
-										<Card class="bg-black border-x border-b border-gray-800 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]">
+										<Card class="bg-black border-x border-b border-black !border-t-0 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)]">
 											<div class="p-6 grid grid-cols-2 gap-4">
 												{#each subPages as page, index}
 													{@const isHovered = hoveredIndex === index}

@@ -78,3 +78,11 @@
 html {
   scrollbar-gutter: stable; /* Forces a consistent scrollbar space */
 }
+
+/* Add to your global styles or component styles */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

@@ -18,11 +18,17 @@ export interface Brand {
 
 export interface BrandEntity {
   id: number;
-  brandName: string;
+  name: string;           // Used in page.svelte
+  brandName: string;      // Used in carousel
   mainCategory: string | null;
   subCategory: string | null;
+  category?: {
+    main_category: string;
+    sub_category: string;
+  };
   brandDescription: string;
-  brandWebsite: string | null;
+  website?: string;      // Used in page.svelte
+  brandWebsite?: string; // Used in carousel
   logo?: {
     type: 'simple-icon' | 'custom-svg' | 'wordmark';
     value?: string;

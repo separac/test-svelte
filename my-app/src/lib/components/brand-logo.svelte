@@ -8,6 +8,9 @@
       size?: 'sm' | 'md' | 'lg';
     }>();
   
+    // Create a derived property for the display name
+    const displayName = $derived(brand.name || brand.brandName);
+
     const sizeClasses = {
       sm: 'h-6 w-6',
       md: 'h-8 w-8',
@@ -25,7 +28,7 @@
     {#if brand.logo?.type === 'simple-icon' && brand.logo?.value}
         <img
             src={brand.logo.value}
-            alt={`${brand.brandName} logo`}
+            alt={`${displayName} logo`}
             class={cn(sizeClasses[size], "object-contain")}
         />
     {:else}
@@ -36,9 +39,9 @@
                 'rounded-full flex items-center justify-center font-semibold',
                 fontSizes[size]
             )}
-            aria-label={`${brand.brandName} logo`}
+            aria-label={`${displayName} logo`}
         >
-            {brand.brandName.substring(0, 2).toUpperCase()}
+            {displayName.substring(0, 2).toUpperCase()}
         </div>
     {/if}
 </div>

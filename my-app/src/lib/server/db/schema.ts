@@ -1,5 +1,6 @@
 // src/lib/server/db/schema.ts
 import { text, integer, numeric, boolean, timestamp, pgTable } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';  // Add this import
 
 export const products = pgTable('products', {
   id: integer('id').primaryKey(),
@@ -26,3 +27,12 @@ export const brands = pgTable('brands', {
   website: text('website'),
   category_id: integer('category_id').references(() => categories.id),
 });
+
+// Add these relations to your existing schema:
+export const brandsRelations = relations(brands, ({ many, one }) => ({
+  products: many(products),
+  category: one(categories, {
+    fields: [brands.category_id],
+    references: [categories.id],
+  }),
+}));
