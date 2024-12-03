@@ -274,7 +274,7 @@
 			<div class="container max-w-screen-xl">
 				<div class="h-4 w-full text-white flex items-center justify-center text-xs tracking-[0.2rem] overflow-hidden whitespace-nowrap">
 					{#each Array(75) as _}
-						<span class="inline-block mx-1">���</span>
+						<span class="inline-block mx-1">✱</span>
 					{/each}
 				</div>
 			</div>
