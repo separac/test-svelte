@@ -25,6 +25,7 @@ export const brands = pgTable('brands', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   website: text('website'),
+  location: text('location'),
   category_id: integer('category_id').references(() => categories.id),
 });
 

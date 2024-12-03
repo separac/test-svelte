@@ -1,36 +1,40 @@
-<!-- src/routes/brands/[id]/+page.svelte -->
 <script lang="ts">
+    import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "$lib/components/ui/card";
+    import { Separator } from "$lib/components/ui/separator";
+    import Globe from '~icons/lucide/globe';
+    import Box from '~icons/lucide/box';
+    import MapPin from '~icons/lucide/map-pin';
+    import TagIcon from '~icons/lucide/tag';
+    import ChevronRight from '~icons/lucide/chevron-right';
+    import Plus from '~icons/lucide/plus';
     import type { PageData } from './$types';
-    import { 
-        Breadcrumb,
-        BreadcrumbItem,
-        BreadcrumbList,
-        BreadcrumbPage,
-        BreadcrumbSeparator
-    } from "$lib/components/ui/breadcrumb";
-    import { 
-        Card,
-        CardContent,
-        CardDescription,
-        CardHeader,
-        CardTitle 
-    } from "$lib/components/ui/card";
-    import BrandLogo from '$lib/components/brand-logo.svelte';
-    import { formatCurrency } from '$lib/utils/format';
-
-    // Import icons (using heroicons style for consistency)
-    import GlobeIcon from '~icons/heroicons/globe-alt';
-    import BoxIcon from '~icons/heroicons/cube';
-    import MapPinIcon from '~icons/heroicons/map-pin';
-    import CurrencyIcon from '~icons/heroicons/currency-dollar';
-    import PlusIcon from '~icons/heroicons/plus';
-    import { Button } from '$lib/components/ui/button';
-    import StoreIcon from '~icons/heroicons/building-storefront';
-    import FolderIcon from '~icons/heroicons/folder';
-    import TagIcon from '~icons/heroicons/tag';
-
-    let { data } = $props<{ data: PageData }>();
     
+    const { data }: { data: PageData } = $props();
+    
+    // Keep existing getCategoryIcon function
+    import { getCategoryIcon } from '$lib/utils/category-icons';
+    import { formatCurrency } from '$lib/utils/format';
+    import CountryFlag from "$lib/components/ui/country-flag.svelte";
+
+    // Calculate average price
+    let averagePrice = $derived(() => {
+        if (!data.brand) return 0;
+        const productsWithPrice = data.products.filter(product => 
+            product.msrp !== null && 
+            !isNaN(Number(product.msrp)) &&
+            product.msrp > 0
+        );
+        
+        if (productsWithPrice.length === 0) return 0;
+        
+        const sum = productsWithPrice.reduce((acc, product) => 
+            acc + Number(product.msrp), 0);
+            
+        return sum / productsWithPrice.length;
+    });
+
+    // Simplify urls
+
     function getDomainFromUrl(url: string | null): string {
         if (!url) return '';
         try {
@@ -40,161 +44,216 @@
         }
     }
 
-    // Calculate average price using Svelte 5's runes
-    let averagePrice = $derived(
-        data.products.length > 0 
-            ? data.products.reduce((acc, product) => acc + (product.msrp || 0), 0) / data.products.length 
-            : 0
-    );
+    
+    // Stats data
+    let stats = $derived([
+        { 
+            icon: Globe, 
+            label: 'Website', 
+            value: data.brand?.website 
+        },
+        { 
+            icon: Box, 
+            label: 'Products', 
+            value: `${data.products?.length || 0} items` 
+        },
+        { 
+            icon: MapPin, 
+            label: 'Location', 
+            value: data.brand?.location 
+        },
+        { 
+            icon: TagIcon, 
+            label: 'Avg. Price', 
+            value: formatCurrency(averagePrice())
+        }
+    ]);
 </script>
 
-<div class="container max-w-screen-xl space-y-8 py-8 relative z-1">
-    <!-- Breadcrumb Navigation -->
-    <Breadcrumb class="font-mono">
-        <BreadcrumbList>
-            <BreadcrumbItem>
-                <a href="/" class="hover:underline">Home</a>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-                <a href="/brands" class="hover:underline">Brands</a>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbPage>{data.brand.name}</BreadcrumbPage>
-        </BreadcrumbList>
-    </Breadcrumb>
-
-    <!-- Main Brand Info -->
+<div class="min-h-screen bg-white font-sans">
     {#if data.brand}
-        <!-- Products Section -->
-        <section class="mt-8">
-            <h2 class="flex items-center gap-2 text-xl font-medium border-b pb-4 mb-6">
-                <StoreIcon class="h-6 w-6" />
-                Profile
-            </h2>
-        <div class="bg-card p-4 sm:p-8 relative border rounded-xl overflow-hidden">
-
-            <!-- Brand Header -->
-            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-md overflow-hidden">
-                    <BrandLogo brand={data.brand} class="w-full h-full object-contain" />
+        <!-- Hero Section -->
+        <div class="pt-12 pb-8 bg-gradient-to-b from-gray-50">
+            <div class="container max-w-screen-xl mx-auto">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-3 text-sm text-gray-600 mb-8 font-mono">
+                    <a href="/brands" class="hover:text-blue-600">Brands</a>
+                    <ChevronRight class="h-4 w-4" />
+                    <span>{data.brand.category.mainCategory}</span>
                 </div>
-                
-                <div class="flex-grow text-center sm:text-left">
-                    <h1 class="text-xl sm:text-3xl font-semibold mb-3">
-                        {data.brand.name}
-                    </h1>
-                    
-                    <!-- Categories Display -->
-                    <div class="flex flex-wrap gap-2">
-                        {#if data.brand.mainCategory}
-                            <div class="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm">
-                                <FolderIcon class="h-4 w-4 mr-1.5" />
-                                {data.brand.mainCategory}
-                            </div>
-                        {/if}
-                        
-                        {#if data.brand.subCategories?.length}
-                            {#each data.brand.subCategories as category}
-                                <div class="inline-flex items-center px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm">
-                                    <TagIcon class="h-3.5 w-3.5 mr-1.5" />
-                                    {category}
-                                </div>
-                            {/each}
+
+                <div class="flex flex-col md:flex-row items-start gap-8 md:gap-12">
+                    <!-- Brand Logo -->
+                    <div class="w-20 h-20 md:w-32 md:h-32 rounded-xl bg-blue-50 flex items-center justify-center shrink-0 p-4 overflow-hidden">
+                        {#if data.brand.logoUrl}
+                            <img 
+                                src={data.brand.logoUrl} 
+                                alt={`${data.brand.name} logo`}
+                                class="w-full h-full object-contain"
+                            />
+                        {:else}
+                            <span class="text-2xl md:text-4xl font-bold text-blue-700">
+                                {data.brand.name.substring(0, 2)}
+                            </span>
                         {/if}
                     </div>
-                </div>
-            </div>
 
-            <!-- Stats Grid -->
-            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {#each [
-                    { icon: GlobeIcon, label: 'Website', value: getDomainFromUrl(data.brand.website) || 'N/A', isWebsite: true },
-                    { icon: BoxIcon, label: 'Products', value: `${data.products.length} items` },
-                    { icon: MapPinIcon, label: 'Location', value: data.brand.location || 'N/A' },
-                    { icon: CurrencyIcon, label: 'Avg. Price', value: formatCurrency(averagePrice) }
-                ] as stat}
-                    <Card>
-                        <CardContent class="p-4 flex flex-col items-center text-center h-full">
-                            <div class="flex items-center gap-2 mb-2">
-                                <!-- svelte-ignore svelte_component_deprecated -->
-                                <svelte:component this={stat.icon} class="h-5 w-5 text-muted-foreground" />
-                                <span class="font-semibold text-sm">{stat.label}</span>
-                            </div>
-                            {#if stat.isWebsite && data.brand.website}
-                                <a 
-                                    href={data.brand.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    class="text-sm font-mono text-blue-600 hover:text-blue-800 mt-auto"
-                                >
-                                    {stat.value}
-                                </a>
-                            {:else}
-                                <span class="text-sm font-mono text-muted-foreground">
-                                    {stat.value}
+                    <!-- Main Content -->
+                    <div class="flex-1">
+                        <h1 class="text-4xl font-bold mb-4">{data.brand.name}</h1>
+                        
+                        <!-- Categories -->
+                        <div class="flex flex-wrap gap-2 mb-8">
+                            {#if data.brand.category?.mainCategory}
+                                {@const maybeIcon = getCategoryIcon(data.brand.category?.mainCategory, true)}
+                                <span class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-mono gap-1.5">
+                                    {#if maybeIcon?.icon}
+                                        {#key maybeIcon.icon}
+                                            <maybeIcon.icon class="h-4 w-4 text-blue-700" />
+                                        {/key}
+                                    {/if}
+                                    {data.brand.category.mainCategory}
                                 </span>
                             {/if}
-                        </CardContent>
-                    </Card>
-                {/each}
-            </div>
-        </div>
-        </section>
-        <!-- Products Section -->
-        <section class="mt-8">
-            <h2 class="flex items-center gap-2 text-xl font-medium border-b pb-4 mb-6">
-                <BoxIcon class="h-6 w-6" />
-                Products
-            </h2>
-            
-            {#if data.products.length === 0}
-                <Card class="p-8 font-mono">
-                    <div class="flex flex-col items-center text-center gap-4">
-                        <div class="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
-                            <BoxIcon class="h-12 w-12 text-muted-foreground" />
+                            {#if data.brand.category?.subCategory}
+                                {@const categories = Array.isArray(data.brand.category?.subCategory) 
+                                    ? data.brand.category.subCategory 
+                                    : [data.brand.category?.subCategory]}
+                                {#each categories as subCategory}
+                                    {@const maybeIcon = getCategoryIcon(subCategory, false)}
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-mono gap-1.5">
+                                        {#if maybeIcon}
+                                            <maybeIcon.icon class="h-4 w-4 text-blue-700" />
+                                        {/if}
+                                        {subCategory}
+                                    </span>
+                                {/each}
+                            {/if}
                         </div>
-                        <div>
-                            <h3 class="text-lg font-semibold mb-2">No products yet</h3>
-                            <p class="text-muted-foreground mb-4">
-                                Be the first to submit a product for {data.brand.name}
-                            </p>
-                            <Button variant="default" class="bg-blue-600 hover:bg-blue-800" asChild>
-                                <a href="/submit-product" class="flex items-center gap-2">
-                                    <PlusIcon class="h-4 w-4" />
-                                    Submit Product
-                                </a>
-                            </Button>
-                        </div>
-                    </div>
-                </Card>
-            {:else}
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {#each data.products as product (product.id)}
-                        <Card class="transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                            <CardHeader>
-                                <CardTitle class="text-lg">{product.name}</CardTitle>
-                                {#if product.subCategory}
-                                    <CardDescription>{product.subCategory}</CardDescription>
-                                {/if}
-                            </CardHeader>
-                            <CardContent>
-                                {#if product.description}
-                                    <p class="text-sm text-muted-foreground line-clamp-2 mb-2">
-                                        {product.description}
-                                    </p>
-                                {/if}
-                                {#if product.msrp}
-                                    <div class="font-semibold">
-                                        {formatCurrency(product.msrp)}
+
+                        <!-- Quick Stats Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                            {#each stats as stat}
+                                {#if stat.value}
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <svelte:component this={stat.icon} class="h-4 w-4 text-gray-400" />
+                                            {#if stat.label === 'Website' && data.brand.website}
+                                                <a 
+                                                    href={data.brand.website}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer" 
+                                                    class="font-mono font-medium text-blue-600 hover:underline"
+                                                >
+                                                    {getDomainFromUrl(data.brand.website)}
+                                                </a>
+                                            {:else if stat.label === 'Location'}
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-mono font-medium">{stat.value}</span>
+                                                    <CountryFlag country={stat.value} size="sm" />
+                                                </div>
+                                            {:else}
+                                                <span class="font-mono font-medium">{stat.value}</span>
+                                            {/if}
+                                        </div>
+                                        <span class="text-sm text-gray-600 font-mono">{stat.label}</span>
                                     </div>
                                 {/if}
-                            </CardContent>
-                        </Card>
-                    {/each}
+                            {/each}
+                        </div>
+
+                        <!-- About Section -->
+                        {#if data.brand.description}
+                            <div class="w-full">
+                                <Separator class="mb-8" />
+                                <div>
+                                    <h2 class="text-xl font-semibold mb-4">About</h2>
+                                    <p class="text-gray-600 leading-relaxed">
+                                        {data.brand.description}
+                                    </p>
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
-            {/if}
-        </section>
+            </div>
+        </div>
+
+        <!-- Products Section -->
+        <div class="container max-w-screen-xl mx-auto py-12">
+            <Separator class="mb-8" />
+            
+            <div class="space-y-8">
+                <h2 class="text-2xl font-semibold flex items-center gap-2">
+                    <Box class="h-6 w-6 text-gray-400" />
+                    <span>Products</span>
+                </h2>
+                
+                {#if data.products.length === 0}
+                    <Card class="p-8">
+                        <div class="flex flex-col items-center text-center gap-4">
+                            <div class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center">
+                                <Box class="h-12 w-12 text-gray-400" />
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold mb-2">No products yet</h3>
+                                <p class="text-gray-600 mb-4 font-mono">
+                                    Be the first to submit a product for {data.brand.name}
+                                </p>
+                                <a 
+                                    href="/submit-product" 
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-mono"
+                                >
+                                    <Plus class="h-4 w-4" />
+                                    Submit Product
+                                </a>
+                            </div>
+                        </div>
+                    </Card>
+                {:else}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {#each data.products as product (product.id)}
+                            <a 
+                                href="/products/{product.id}" 
+                                class="block group"
+                            >
+                                <Card class="h-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                                    <div class="p-6">
+                                        {#if product.category.subCategory}
+                                        {@const maybeIcon = getCategoryIcon(product.category.subCategory, false)}
+                                            <div class="mb-4">
+                                                <span class="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-mono gap-1.5">
+                                                    {#if maybeIcon}
+                                                        <svelte:component this={maybeIcon.icon} class="h-3.5 w-3.5 text-blue-700" />
+                                                    {/if}
+                                                    {product.category.subCategory}
+                                                </span>
+                                            </div>
+                                        {/if}
+                                        <h3 class="font-medium mb-2 group-hover:text-blue-600 transition-colors">
+                                            {product.name}
+                                        </h3>
+                                        {#if product.description}
+                                            <p class="text-sm text-gray-600 mb-4 line-clamp-2">
+                                                {product.description}
+                                            </p>
+                                        {/if}
+                                        <div class="flex items-center justify-between">
+                                            {#if product.msrp}
+                                                <span class="font-mono font-semibold">{formatCurrency(product.msrp)}</span>
+                                            {/if}
+                                            <span class="text-sm text-blue-600 font-mono group-hover:translate-x-1 transition-transform">
+                                                View details →
+                                            </span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </a>
+                        {/each}
+                    </div>
+                {/if}
+            </div>
+        </div>
     {:else}
         <Card>
             <CardHeader>

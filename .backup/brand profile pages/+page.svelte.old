@@ -1,0 +1,265 @@
+<!-- src/routes/brands/[id]/+page.svelte -->
+<script lang="ts">
+    import type { PageData } from './$types';
+    import { 
+        Breadcrumb,
+        BreadcrumbItem,
+        BreadcrumbList,
+        BreadcrumbPage,
+        BreadcrumbSeparator
+    } from "$lib/components/ui/breadcrumb";
+    import { 
+        Card,
+        CardContent,
+        CardDescription,
+        CardHeader,
+        CardTitle 
+    } from "$lib/components/ui/card";
+    import BrandLogo from '$lib/components/brand-logo.svelte';
+    import { formatCurrency } from '$lib/utils/format';
+    // import { getDomainFromUrl } from '$lib/utils/getDomainFromUrl';
+
+    // Import icons (using heroicons style for consistency)
+    import GlobeIcon from '~icons/heroicons/globe-alt';
+    import BoxIcon from '~icons/heroicons/cube';
+    import MapPinIcon from '~icons/heroicons/map-pin';
+    import CurrencyIcon from '~icons/heroicons/currency-dollar';
+    import PlusIcon from '~icons/heroicons/plus';
+    import { Button } from '$lib/components/ui/button';
+    import StoreIcon from '~icons/heroicons/building-storefront';
+    import FolderIcon from '~icons/heroicons/folder';
+    import TagIcon from '~icons/heroicons/tag';
+    import { getCategoryIcon } from '$lib/utils/category-icons';
+    import CountryFlag from "$lib/components/ui/country-flag.svelte";
+
+    let { data } = $props<{ data: PageData }>();
+    
+    function getDomainFromUrl(url: string | null): string {
+        if (!url) return '';
+        try {
+            return new URL(url).hostname.replace('www.', '');
+        } catch {
+            return '';
+        }
+    }
+
+    // Calculate average price using Svelte 5's runes
+    let averagePrice = $derived(() => {
+        // Log raw data first
+        // console.log("Raw products:", data.products);
+
+        // Filter out products without valid MSRP
+        const productsWithPrice = data.products.filter(product => {
+            const isValid = product.msrp !== null && 
+                           product.msrp !== undefined && 
+                           !isNaN(Number(product.msrp)) &&
+                           product.msrp > 0;
+            return isValid;
+        });
+
+        // Log filtered products
+        // console.log("Products with valid prices:", productsWithPrice);
+
+        // Return 0 if no valid products
+        if (productsWithPrice.length === 0) {
+            // console.log("No valid products with prices");
+            return 0;
+        }
+
+        // Calculate sum
+        const sum = productsWithPrice.reduce((acc, product) => {
+            const price = Number(product.msrp);
+            // console.log(`Adding price: ${price} to accumulator: ${acc}`);
+            return acc + price;
+        }, 0);
+
+        // console.log(`Final sum: ${sum}, Count: ${productsWithPrice.length}`);
+        
+        // Calculate and return average
+        const avg = sum / productsWithPrice.length;
+        // console.log(`Calculated average: ${avg}`);
+        
+        return avg;
+    });
+
+    $effect(() => {
+        // console.log("Products MSRP values:", data.products.map(p => p.msrp));
+    });
+</script>
+
+<div class="container max-w-screen-xl space-y-8 py-8 relative z-1">
+    <!-- Breadcrumb Navigation -->
+    <Breadcrumb class="font-mono">
+        <BreadcrumbList>
+            <BreadcrumbItem>
+                <a href="/" class="hover:underline">Home</a>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+                <a href="/brands" class="hover:underline">Brands</a>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbPage>{data.brand.name}</BreadcrumbPage>
+        </BreadcrumbList>
+    </Breadcrumb>
+
+    <!-- Main Brand Info -->
+    {#if data.brand}
+        <!-- Products Section -->
+        <section class="mt-8">
+            <h2 class="flex items-center gap-2 text-xl font-medium border-b pb-2 mb-6">
+                <StoreIcon class="h-6 w-6" />
+                Profile
+            </h2>
+        <div class="bg-card p-4 sm:p-8 relative border rounded-xl overflow-hidden">
+            <!-- Brand Header -->
+            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-md overflow-hidden">
+                    <BrandLogo brand={data.brand}/>
+                </div>
+                
+                <div class="flex-grow text-center sm:text-left">
+                    <h1 class="text-xl sm:text-3xl font-semibold mb-3">
+                        {data.brand.name}
+                    </h1>
+                    
+                    <!-- Categories Display -->
+                    <div class="flex flex-wrap gap-2">
+                        {#if data.brand.category.mainCategory}
+                            <div class="inline-flex items-center px-3 py-1 rounded-full bg-gray-200 text-primary font-mono text-sm">
+                                <FolderIcon class="h-4 w-4 mr-1.5" />
+                                {data.brand.category.mainCategory}
+                            </div>
+                        {/if}
+                        
+                        {#if data.brand.category.subCategory}
+                            {@const categories = Array.isArray(data.brand.category.subCategory) 
+                                ? data.brand.category.subCategory 
+                                : [data.brand.category.subCategory]}
+                            {#each categories as subCategory}
+                                {@const maybeIcon = getCategoryIcon(subCategory as string, false)}  
+                                <div class="inline-flex items-center px-3 py-1 rounded-full bg-gray-200 text-primary font-mono text-sm">
+                                    {#if maybeIcon}
+                                        <div class={maybeIcon.color}>
+                                            {#if maybeIcon.icon}
+                                                <maybeIcon.icon class="h-4 w-4 mr-1.5" />
+                                            {/if}
+                                        </div>
+                                    {/if}
+                                    {subCategory}
+                                </div>
+                            {/each}
+                        {/if}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {#each [
+                    { icon: GlobeIcon, label: 'Website', value: getDomainFromUrl(data.brand.website) || 'N/A', isLink: true },
+                    { icon: BoxIcon, label: 'Products', value: `${data.products.length} items` },
+                    { icon: MapPinIcon, label: 'Location', value: data.brand.location || 'N/A', hasFlag: true },
+                    { icon: TagIcon, label: 'Avg. Price', value: formatCurrency(averagePrice()) }
+                ] as stat}
+                    <div class="flex flex-col items-center p-4 bg-white border rounded-lg">
+                        <stat.icon class="h-6 w-6 text-primary mb-2" />
+                        <span class="text-sm text-gray-500 font-mono">{stat.label}</span>
+                        {#if stat.isLink && data.brand.website}
+                            <a href={data.brand.website} target="_blank" rel="noopener noreferrer" class="mt-1 text-lg font-semibold text-blue-600 hover:underline font-mono">
+                                {stat.value}
+                            </a>
+                        {:else if stat.hasFlag}
+                            <div class="flex items-center mt-1">
+                                <CountryFlag country={stat.value} size="sm" />
+                                <span class="ml-2 text-lg font-semibold font-mono">{stat.value}</span>
+                            </div>
+                        {:else}
+                            <span class="mt-1 text-lg font-semibold font-mono">{stat.value}</span>
+                        {/if}
+                    </div>
+                {/each}
+            </div>
+        </div>
+        </section>
+        <!-- Products Section -->
+        <section class="mt-8">
+            <h2 class="flex items-center gap-2 text-xl font-medium border-b pb-2 mb-6">
+                <BoxIcon class="h-6 w-6" />
+                Products
+            </h2>
+            <div class="bg-card p-4 sm:p-8 relative border rounded-xl overflow-hidden">
+                {#if data.products.length === 0}
+                    <Card class="p-8 font-mono">
+                        <div class="flex flex-col items-center text-center gap-4 bg-white">
+                            <div class="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+                                <BoxIcon class="h-12 w-12 text-muted-foreground" />
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold mb-2">No products yet</h3>
+                                <p class="text-muted-foreground mb-4">
+                                    Be the first to submit a product for {data.brand.name}
+                                </p>
+                                <Button variant="default" class="bg-blue-600 hover:bg-blue-800" asChild>
+                                    <a href="/submit-product" class="flex items-center gap-2">
+                                        <PlusIcon class="h-4 w-4" />
+                                        Submit Product
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                {:else}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {#each data.products as product (product.id)}
+                            <Card class="bg-gray-50 border-none shadow-none hover:bg-white hover:border-black hover:shadow-md transition-all duration-300 group relative">
+                                <CardHeader>
+                                    <CardTitle class="text-lg">{product.name}</CardTitle>
+                                    {#if product.category.subCategory}
+                                        <div class="flex items-center gap-1.5 mt-1 mb-2">
+                                            <span class="bg-gray-200 text-primary px-3 py-1 rounded-full text-xs font-mono inline-flex items-center gap-1.5">
+                                                {#if product.category.subCategory}
+                                                    {@const maybeIcon = getCategoryIcon(product.category.subCategory, false)}
+                                                    {#if maybeIcon}
+                                                        <div class={maybeIcon.color}>
+                                                            <maybeIcon.icon class="h-3.5 w-3.5" />
+                                                        </div>
+                                                    {/if}
+                                                    {product.category.subCategory}
+                                                {/if}
+                                            </span>
+                                        </div>
+                                    {/if}
+                                    {#if product.description}
+                                        <p class="text-sm text-muted-foreground line-clamp-2">
+                                            {product.description}
+                                        </p>
+                                    {/if}
+                                </CardHeader>
+                                <CardContent>
+                                    {#if product.msrp}
+                                        <div class="font-semibold">
+                                            {formatCurrency(product.msrp)}
+                                        </div>
+                                    {/if}
+                                    <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                            Learn more
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        {/each}
+                    </div>
+                {/if}
+                </div>
+        </section>
+    {:else}
+        <Card>
+            <CardHeader>
+                <CardTitle>Brand not found</CardTitle>
+                <CardDescription>The requested brand could not be found.</CardDescription>
+            </CardHeader>
+        </Card>
+    {/if}
+</div>

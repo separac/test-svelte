@@ -21,6 +21,7 @@ export const load: PageServerLoad = async ({ params }) => {
                 name: brands.name,
                 description: brands.description,
                 website: brands.website,
+                location: brands.location,
                 category: {
                     id: categories.id,
                     mainCategory: categories.main_category,
