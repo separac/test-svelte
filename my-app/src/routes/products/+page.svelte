@@ -174,6 +174,10 @@
     params.set('sortDirection', sort.direction);
     goto(`?${params.toString()}`, { keepFocus: true });
   });
+
+  function handleProductClick(productId: number) {
+    goto(`/products/${productId}`);
+  }
 </script>
 
 <div class="container max-w-screen-xl space-y-8 py-8 relative z-[1]">
@@ -287,7 +291,13 @@
 
     <TableBody>
       {#each data.products as product (product.id)}
-        <TableRow>
+        <tr 
+          class="cursor-pointer hover:bg-gray-50 transition-colors"
+          onclick={() => goto(`/products/${product.id}`)}
+          onKeyDown={(e) => e.key === 'Enter' && goto(`/products/${product.id}`)}
+          tabindex="0"
+          role="button"
+        >
           {#each columns as column}
             {#if column.visible}
               <TableCell>
@@ -352,7 +362,7 @@
               {/if}
             </div>
           </TableCell>
-        </TableRow>
+        </tr>
       {/each}
     </TableBody>
   </Table>
