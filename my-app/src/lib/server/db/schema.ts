@@ -15,8 +15,8 @@ export const products = pgTable('products', {
   country_of_origin: text('country_of_origin'),
   year_introduced: integer('year_introduced'),
   contains_pfas: boolean('contains_pfas'),
-  likes: integer('likes').default(0),
-  dislikes: integer('dislikes').default(0),
+  likes: text('likes'),
+  dislikes: text('dislikes'),
   author_notes: text('author_notes'),
   category_id: integer('category_id').references(() => categories.id),
   brand_id: integer('brand_id').references(() => brands.id),
@@ -37,6 +37,44 @@ export const brands = pgTable('brands', {
   location: text('location'),
   category_id: integer('category_id').references(() => categories.id),
 });
+
+export const productmaterials = pgTable('productmaterials', {
+  product_id: integer('product_id').references(() => products.id),
+  material_id: integer('material_id').references(() => materials.id),
+  percentage: numeric('percentage'),
+});
+
+export const materials = pgTable('materials', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+});
+
+export const productsRelations = relations(products, ({ many, one }) => ({
+  materials: many(productmaterials),
+  brand: one(brands, {
+    fields: [products.brand_id],
+    references: [brands.id]
+  }),
+  category: one(categories, {
+    fields: [products.category_id],
+    references: [categories.id]
+  })
+}));
+
+export const materialsRelations = relations(materials, ({ many }) => ({
+  products: many(productmaterials),
+}));
+
+export const productMaterialsRelations = relations(productmaterials, ({ one }) => ({
+  product: one(products, {
+    fields: [productmaterials.product_id],
+    references: [products.id],
+  }),
+  material: one(materials, {
+    fields: [productmaterials.material_id],
+    references: [materials.id],
+  }),
+}));
 
 // Add these relations to your existing schema:
 export const brandsRelations = relations(brands, ({ many, one }) => ({

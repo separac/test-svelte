@@ -51,28 +51,43 @@ export interface Product {
   description: string;
   msrp: number;
   images: string[];
-  affiliateLinks: {
+  likes: string[];
+  dislikes: string[];
+  productLink: string;
+  affiliateLink: {
     retailer: string;
     price: number;
     url: string;
+  
   }[];
-  specs: {
-    countryOfOrigin: string;
-    yearIntroduced: number;
-    pfasFree: boolean;
-    materials: {
-      name: string;
-      percentage: number;
-    }[];
-    warranty: {
-      type: string;
-      details: string;
-    };
-  };
-  communityFeedback: {
-    likes: string[];
-    considerations: string[];
-  };
+  warrantyInfo: string;
+  materials: {
+    name: string;
+    percentage: number;
+  }[];
+  countryOfOrigin: string;
+  yearIntroduced: number;
+  containsPfas: boolean;
   authorNotes?: string;
   lastUpdated: string;
+}
+
+export interface Material {
+  name: string;
+  percentage: number;
+}
+
+export interface AffiliateLink {
+  retailer: string;
+  price: number;
+  url: string;
+}
+
+export interface ProductImage {
+  url: string;
+}
+
+export interface Category {
+  main: string;
+  sub: string;
 }

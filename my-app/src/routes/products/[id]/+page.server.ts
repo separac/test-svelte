@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { products, brands, categories, productImages } from '$lib/server/db/schema';
+import { products, brands, categories, productImages, productmaterials, materials } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -48,7 +48,17 @@ export const load: PageServerLoad = async ({ params }) => {
             throw error(404, 'Product not found');
         }
 
-        // Then get the images separately
+        // Get the materials information
+        const materialsList = await db
+            .select({
+                name: materials.name,
+                percentage: productmaterials.percentage
+            })
+            .from(productmaterials)
+            .leftJoin(materials, eq(productmaterials.material_id, materials.id))
+            .where(eq(productmaterials.product_id, productId));
+
+        // Get the images separately
         const images = await db
             .select({
                 url: productImages.url
@@ -56,18 +66,15 @@ export const load: PageServerLoad = async ({ params }) => {
             .from(productImages)
             .where(eq(productImages.product_id, productId));
 
-        // Combine product and images
-        const productWithImages = {
-            ...product,
-            images
-        };
-
         return {
-            product: productWithImages
+            product: {
+                ...product,
+                materials: materialsList,
+                images: images
+            }
         };
-
-    } catch (err) {
-        console.error('Error loading product:', err);
-        throw error(500, 'Failed to load product');
+    } catch (e) {
+        console.error('Error loading product:', e);
+        throw error(500, 'Error loading product');
     }
 };

@@ -1,18 +1,23 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import type { Product } from "$lib/types";
-    import { Card, CardHeader, CardTitle, CardContent } from "$lib/components/ui/card";
-    import { Separator } from "$lib/components/ui/separator";
-    import { Badge } from "$lib/components/ui/badge";
+    import type { Product } from '$lib/types';
+
+    // UI Components
+    import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
     import { getCategoryIcon } from '$lib/utils/category-icons';
+    import { Separator } from '$lib/components/ui/separator';
+    import { Badge } from '$lib/components/ui/badge';
+    import CountryFlag from '$lib/components/ui/country-flag.svelte';
     import { formatCurrency } from '$lib/utils/format';
-    import CountryFlag from "$lib/components/ui/country-flag.svelte";
-    import { Alert, AlertTitle, AlertDescription } from "$lib/components/ui/alert";
+    import { Alert, AlertTitle, AlertDescription } from '$lib/components/ui/alert';
     import {
-        Collapsible,
-        CollapsibleContent,
-        CollapsibleTrigger,
-    } from "$lib/components/ui/collapsible";
+        Accordion,
+        AccordionContent,
+        AccordionItem,
+        AccordionTrigger
+    } from "$lib/components/ui/accordion";
+
+    // Icon Imports from lucide-svelte
     import {
         ExternalLink,
         ChevronRight,
@@ -28,9 +33,9 @@
         Check,
         AlertCircle,
         Zap
-    } from "lucide-svelte";
+    } from 'lucide-svelte';
 
-    // Icons
+    // Custom Icons
     import TagIcon from '~icons/lucide/tag';
     import ShoppingCartIcon from '~icons/lucide/shopping-cart';
     import GlobeIcon from '~icons/lucide/globe';
@@ -40,32 +45,54 @@
     import CalendarIcon from '~icons/lucide/calendar';
     import ShieldIcon from '~icons/lucide/shield';
     import MapPinIcon from '~icons/lucide/map-pin';
-    // import ChevronRight from '~icons/lucide/chevron-right';
     import ExternalLinkIcon from '~icons/lucide/external-link';
 
-    // Proper type checking and initialization
-    const { data } = $props();
-    const product = $derived(data?.product ?? null);
-    
-    // State management with proper initialization
-    let isLoading = $state(true);
+
+
+    // Type definition for page props
+    type ProductPageData = {
+        data: {
+            product: Product | null;
+        };
+    };
+
+    // Extracting props using TypeScript type annotation
+    let { data } = $props() as ProductPageData;
+
+    // Derived store for product data
+    let product = $derived.by(() => data?.product ?? null);
+
+    // State variables
+    let isLoading = $derived(product === null);
     let currentImageIndex = $state(0);
-    let isSpecsOpen = $state(false);
     let loadedImages = $state(new Set<number>());
-    
-    // Reactive image processing with safety checks
-    const images = $derived(() => {
+    let isFirstImageLoaded = $state(false);
+    let images = $derived.by(() => {
         if (!product?.images) return [];
-        return Array.isArray(product.images) 
-            ? product.images.map(img => img.url)
-            : [];
+        // Extract the URL from each image object
+        return product.images.map(img => img.url);
     });
 
-    function onImageLoad(index: number) {
-        loadedImages.add(index);
+    // Derive the current image URL
+    let currentImage = $derived.by(() => images?.[currentImageIndex] ?? '');
+
+    /**
+     * Marks an image as loaded by adding its index to the loadedImages set.
+     * @param index - The index of the loaded image.
+     */
+    function onImageLoad(idx: number) {
+        loadedImages.add(idx);
+        if (idx === 0) {
+            isFirstImageLoaded = true;
+        }
     }
 
-    function formatDate(date: string | null) {
+    /**
+     * Formats a date string into a human-readable format.
+     * @param date - The date string to format.
+     * @returns A formatted date string or 'N/A' if invalid.
+     */
+    function formatDate(date: string | null): string {
         if (!date) return 'N/A';
         try {
             return new Date(date).toLocaleDateString('en-US', {
@@ -78,6 +105,11 @@
         }
     }
 
+    /**
+     * Extracts the domain from a given URL.
+     * @param url - The URL string to extract the domain from.
+     * @returns The domain name or an empty string if invalid.
+     */
     function getDomainFromUrl(url: string | null): string {
         if (!url) return '';
         try {
@@ -87,36 +119,66 @@
         }
     }
 
+    /**
+     * Navigates to the next image in the gallery.
+     */
     function nextImage() {
-        if (!images?.length || images.length <= 1) return;
-        currentImageIndex = currentImageIndex === images.length - 1 ? 0 : currentImageIndex + 1;
+        if (images.length <= 1) return;
+        currentImageIndex = (currentImageIndex + 1) % images.length;
     }
 
+    /**
+     * Navigates to the previous image in the gallery.
+     */
     function prevImage() {
-        if (!images?.length || images.length <= 1) return;
-        currentImageIndex = currentImageIndex === 0 ? images.length - 1 : currentImageIndex - 1;
+        if (images.length <= 1) return;
+        currentImageIndex = (currentImageIndex === 0) ? images.length - 1 : currentImageIndex - 1;
     }
 
-    onMount(() => {
-        setTimeout(() => {
-            isLoading = false;
-        }, 100); // Small delay to ensure data is loaded
+    // Initial load effect
+    $effect(() => {
+        // Reset states when product changes
+        currentImageIndex = 0;
+        loadedImages = new Set();
+        isFirstImageLoaded = false;
+
+        // Preload all images
+        images.forEach((url, index) => {
+            const img = new Image();
+            img.src = url;
+            img.onload = () => onImageLoad(index);
+            img.onerror = (error) => {
+                console.error('Error loading image:', error);
+            };
+        });
     });
+
 </script>
 
+<!-- Loading Spinner -->
 {#if isLoading}
     <div class="flex items-center justify-center min-h-screen">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
+
+<!-- Error Message if Product Not Found -->
 {:else if !product}
     <div class="p-4 bg-red-50 text-red-600 rounded-lg">
-        <p>Error loading product data. Please try again later.</p>
+        <Alert>
+            <AlertTitle>Product Not Found</AlertTitle>
+            <AlertDescription>
+                The product you are looking for does not exist.
+            </AlertDescription>
+        </Alert>
     </div>
+
+<!-- Product Display -->
 {:else}
     <div class="min-h-screen bg-white font-sans">
-        <div class="container max-w-screen-xl mx-auto pt-8">
+        <div class="pt-12 pb-8 bg-gradient-to-b from-gray-50">
+        <div class="container max-w-screen-xl mx-auto">
             <!-- Breadcrumb -->
-            <div class="flex items-center gap-2 text-sm text-gray-600 mb-8 font-mono">
+            <div class="flex items-center gap-3 text-sm text-gray-600 mb-8 font-mono">
                 <a href="/" class="hover:text-blue-600">Home</a>
                 <ChevronRight class="h-4 w-4" />
                 <a href="/categories/{product.category.main.toLowerCase()}" class="hover:text-blue-600">
@@ -139,33 +201,31 @@
                 <!-- Categories -->
                 <div class="flex flex-wrap gap-2 mb-6">
                     <span class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-mono gap-1.5">
-                        <getCategoryIcon category={product.category.main} class="h-4 w-4" />
+                        <svelte:component this={getCategoryIcon(product.category.main, true)?.icon} class="h-4 w-4" />
                         {product.category.main}
                     </span>
                     <span class="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-mono gap-1.5">
-                        <ChevronRight class="h-4 w-4" />
+                        <svelte:component this={getCategoryIcon(product.category.sub, false)?.icon} class="h-4 w-4" />
                         {product.category.sub}
                     </span>
                 </div>
                 
-                <Card class="p-6 mb-8">
-                    <div class="prose prose-gray max-w-none">
-                        <p class="text-gray-600 leading-relaxed font-mono">
-                            {product.description}
-                        </p>
-                    </div>
-                </Card>
             </div>
 
-            <!-- Product Description Box (Moved up) -->
-            <Card class="mb-8">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold mb-4">Product Description</h3>
-                    <p class="text-gray-600 leading-relaxed font-mono">
-                        {product.description || 'N/A'}
-                    </p>
-                </div>
-            </Card>
+            <!-- Author Notes -->
+            {#if product.authorNotes}
+            <div>
+                <section class="mb-12">
+                    <Alert class="bg-blue-50 border-blue-200">
+                        <Info class="h-5 w-5 text-blue-600" />
+                        <AlertTitle class="text-blue-600 mb-2 font-mono">Author Notes</AlertTitle>
+                        <AlertDescription class="text-gray-700 font-mono">
+                            {product.authorNotes}
+                        </AlertDescription>
+                    </Alert>
+                </section>
+            </div>
+            {/if}
 
             <!-- Main Content Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
@@ -174,38 +234,41 @@
                     {#if images.length > 0}
                         <Card class="relative overflow-hidden bg-gray-50 aspect-[4/3]">
                             {#each images as image, idx}
-                                {#if Math.abs(currentImageIndex - idx) <= 1}
-                                    <img
-                                        src={image}
-                                        alt="{product.name} - View {idx + 1}"
-                                        class="w-full h-full object-contain absolute top-0 left-0 transition-opacity duration-300 {
-                                            currentImageIndex === idx ? 'opacity-100' : 'opacity-0'
-                                        }"
-                                        loading="lazy"
-                                        on:load={() => onImageLoad(idx)}
-                                        style="display: {currentImageIndex === idx ? 'block' : 'none'}"
-                                    />
-                                {/if}
+                            {#if Math.abs(currentImageIndex - idx) <= 1}
+                                <img
+                                src={image}
+                                alt="{product.name} - View {idx + 1}"
+                                class="w-full h-full object-contain absolute top-0 left-0 transition-opacity duration-300 {
+                                    currentImageIndex === idx ? 'opacity-100' : 'opacity-0'
+                                }"
+                                loading="lazy"
+                                onload={() => onImageLoad(idx)}
+                                style="display: {currentImageIndex === idx ? 'block' : 'none'}"
+                                />
+                            {/if}
                             {/each}
 
-                            <!-- Loading state -->
-                            {#if !loadedImages.has(currentImageIndex)}
+                            <!-- Loading state - Updated condition -->
+                            {#if !isFirstImageLoaded}
                                 <div class="absolute inset-0 flex items-center justify-center bg-gray-100">
-                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                        <p class="text-sm text-gray-500">Loading image...</p>
+                                    </div>
                                 </div>
                             {/if}
 
                             <!-- Navigation buttons -->
-                            {#if images.length > 1}
+                            {#if images.length > 1 && isFirstImageLoaded}
                                 <button
-                                    on:click={prevImage}
+                                    onclick={prevImage}
                                     class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 rounded-full shadow-lg hover:bg-white transition-colors"
                                     aria-label="Previous image"
                                 >
                                     ←
                                 </button>
                                 <button
-                                    on:click={nextImage}
+                                    onclick={nextImage}
                                     class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/90 rounded-full shadow-lg hover:bg-white transition-colors"
                                     aria-label="Next image"
                                 >
@@ -217,14 +280,14 @@
                             <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                                 {#each images as _, idx}
                                     <button
-                                {#each images as _, idx}
-                                    <button
                                         onclick={() => currentImageIndex = idx}
                                         class="w-2 h-2 rounded-full transition-colors {
                                             idx === currentImageIndex ? 'bg-blue-600' : 'bg-gray-300'
                                         }"
                                         aria-label="Go to image {idx + 1}"
                                     ></button>
+                                {/each}
+                            </div>
                         </Card>
                     {:else}
                         <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center">
@@ -232,7 +295,7 @@
                         </div>
                     {/if}
                     <p class="text-xs text-gray-500 italic text-center">
-                        Images shown are exemplary product pictures. All image rights belong to the respective manufacturer.
+                        Images shown are exemplary product pictures. All image rights belong to the manufacturer.
                     </p>
                 </div>
 
@@ -241,17 +304,9 @@
                     <!-- Pricing -->
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="text-3xl font-bold font-mono">{formatCurrency(product.msrp).replace('$', '')}</span>
+                            <span class="text-3xl font-bold font-mono">{formatCurrency(product.msrp)}</span>
                             <span class="text-sm text-gray-500 font-mono self-end mb-1">MSRP</span>
                         </div>
-                        {#if product.currentPrice && product.currentPrice !== product.msrp}
-                            <div class="text-sm text-gray-600 mt-2">
-                                Current Price: ${formatCurrency(product.currentPrice)}
-                                <span class="text-xs ml-2">
-                                    (Updated: {formatDate(product.priceLastUpdated)})
-                                </span>
-                            </div>
-                        {/if}
                     </div>
 
                     <!-- Where to Buy -->
@@ -282,208 +337,94 @@
                             {/if}
                         </div>
                     </div>
-
-                    <!-- Product Details Collapsible -->
-                    <Collapsible
-                        bind:open={isSpecsOpen}
-                        class="w-full space-y-2"
-                    >
-                        <CollapsibleTrigger class="flex w-full items-center justify-between rounded-lg border p-4 font-medium hover:bg-gray-50">
-                            <div class="flex items-center gap-2">
-                                <Info class="h-5 w-5 text-gray-500" />
-                                <span>Product Information</span>
+            <!-- Product Details Accordion -->
+            <Accordion type="single">
+                <AccordionItem value="product-info">
+                    <AccordionTrigger>
+                        <div class="flex items-center gap-2">
+                            <Info class="h-5 w-5 text-gray-500" />
+                            <span>Product Information</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Origin -->
+                            <div class="flex items-start gap-3">
+                                <Globe class="h-5 w-5 text-gray-400 mt-1" />
+                                <div>
+                                    <p class="text-sm text-gray-600 font-mono">Origin</p>
+                                    <p class="font-medium font-mono">{product.countryOfOrigin || 'N/A'}</p>
+                                </div>
                             </div>
-                            <ChevronDown
-                                class="h-5 w-5 text-gray-500 transition-transform {isSpecsOpen ? 'rotate-180' : ''}"
-                            />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent class="space-y-6 rounded-lg border p-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Origin -->
-                                <div class="flex items-start gap-3">
-                                    <Globe class="h-5 w-5 text-gray-400 mt-1" />
-                                    <div>
-                                        <p class="text-sm text-gray-600 font-mono">Origin</p>
-                                        <p class="font-medium font-mono">{product.countryOfOrigin}</p>
-                                    </div>
-                                </div>
 
-                                <!-- Year Introduced -->
-                                <div class="flex items-start gap-3">
-                                    <Calendar class="h-5 w-5 text-gray-400 mt-1" />
-                                    <div>
-                                        <p class="text-sm text-gray-600 font-mono">Year Introduced</p>
-                                        <p class="font-medium font-mono">{product.yearIntroduced}</p>
-                                    </div>
+                            <!-- Year Introduced -->
+                            <div class="flex items-start gap-3">
+                                <Calendar class="h-5 w-5 text-gray-400 mt-1" />
+                                <div>
+                                    <p class="text-sm text-gray-600 font-mono">Year Introduced</p>
+                                    <p class="font-medium font-mono">{product.yearIntroduced || 'N/A'}</p>
                                 </div>
+                            </div>
 
-                                <!-- Materials and PFAS -->
-                                <div class="flex items-start gap-3 md:col-span-2">
-                                    <Box class="h-5 w-5 text-gray-400 mt-1" />
-                                    <div class="flex-1">
-                                        <p class="text-sm text-gray-600 font-mono mb-2">Materials</p>
+                            <!-- Materials -->
+                            <div class="flex items-start gap-3">
+                                <Box class="h-5 w-5 text-gray-400 mt-1" />
+                                <div>
+                                    <p class="text-sm text-gray-600 font-mono">Materials</p>
+                                    {#if product.materials?.length}
                                         <div class="space-y-2">
                                             {#each product.materials as material}
-                                                <div class="flex items-center justify-between font-mono border-b border-gray-100 pb-2">
+                                                <div class="flex items-center justify-between font-mono">
                                                     <span>{material.name}</span>
-                                                    <span class="text-sm text-gray-600">{material.percentage}%</span>
+                                                    <span class="text-sm text-gray-600">&nbsp;{material.percentage}%</span>
                                                 </div>
                                             {/each}
                                         </div>
-                                        {#if product.containsPfas}
-                                            <div class="mt-3 flex items-center gap-2">
-                                                <Zap class="h-4 w-4 text-gray-400" />
-                                                <span class="text-sm text-gray-600 font-mono">PFAS Free Product</span>
-                                            </div>
-                                        {/if}
-                                    </div>
-                                </div>
-
-                                <!-- Warranty -->
-                                <div class="flex items-start gap-3 md:col-span-2">
-                                    <Shield class="h-5 w-5 text-gray-400 mt-1" />
-                                    <div>
-                                        <p class="text-sm text-gray-600 font-mono mb-1">{product.warrantyInfo.type}</p>
-                                        <p class="text-sm text-gray-600 font-mono">{product.warrantyInfo.details}</p>
-                                    </div>
+                                    {:else}
+                                        <p class="font-medium font-mono">N/A</p>
+                                    {/if}
                                 </div>
                             </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+
+                            <!-- PFAS Information -->
+                            <div class="flex items-start gap-3">
+                                <Zap class="h-5 w-5 text-gray-400 mt-1" />
+                                <div>
+                                    <p class="text-sm text-gray-600 font-mono">Contains PFAS</p>
+                                    <p class="font-medium font-mono">{product.containsPfas ? 'Yes' : 'No'}</p>
+                                </div>
+                            </div>
+
+                            <!-- Warranty -->
+                            <div class="flex items-start gap-3">
+                                <Shield class="h-5 w-5 text-gray-400 mt-1" />
+                                <div>
+                                    <p class="text-sm text-gray-600 font-mono">Warranty</p>
+                                    {#if product.warrantyInfo}
+                                        <p class="font-medium font-mono">{product.warrantyInfo}</p>
+                                    {:else}
+                                        <p class="font-medium font-mono">N/A</p>
+                                    {/if}
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+
                 </div>
             </div>
 
-            <!-- Product Information Box (After images) -->
-            <Card class="mb-8">
-                <CollapsibleContent class="space-y-6 p-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Origin -->
-                        <div class="flex items-start gap-3">
-                            <Globe class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">Country of Origin</p>
-                                <p class="font-medium font-mono">{product.countryOfOrigin || 'N/A'}</p>
-                            </div>
-                        </div>
 
-                        <!-- Year Introduced -->
-                        <div class="flex items-start gap-3">
-                            <Calendar class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">Year Introduced</p>
-                                <p class="font-medium font-mono">{product.yearIntroduced || 'N/A'}</p>
-                            </div>
-                        </div>
 
-                        <!-- PFAS Information -->
-                        <div class="flex items-start gap-3">
-                            <Zap class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">PFAS Free</p>
-                                <p class="font-medium font-mono">{product.containsPfas ? 'No' : 'Yes'}</p>
-                            </div>
-                        </div>
-
-                        <!-- Warranty -->
-                        <div class="flex items-start gap-3">
-                            <Shield class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">Warranty</p>
-                                <p class="font-medium font-mono">{product.warrantyInfo || 'N/A'}</p>
-                            </div>
-                        </div>
-
-                        <!-- Product Link -->
-                        <div class="flex items-start gap-3">
-                            <ExternalLink class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">Official Product Page</p>
-                                {#if product.productLink}
-                                    <a href={product.productLink} target="_blank" rel="noopener noreferrer" 
-                                       class="text-blue-600 hover:underline font-mono">
-                                        {getDomainFromUrl(product.productLink)}
-                                    </a>
-                                {:else}
-                                    <p class="font-medium font-mono">N/A</p>
-                                {/if}
-                            </div>
-                        </div>
-
-                        <!-- Brand Information -->
-                        <div class="flex items-start gap-3">
-                            <Box class="h-5 w-5 text-gray-400 mt-1" />
-                            <div>
-                                <p class="text-sm text-gray-600 font-mono">Brand</p>
-                                <a href="/brands/{product.brand.id}" class="text-blue-600 hover:underline font-mono">
-                                    {product.brand.name}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </CollapsibleContent>
+            <Card class="p-6 mb-8">
+                <div class="prose prose-gray max-w-none">
+                    <p class="text-gray-600 leading-relaxed font-mono">
+                        {product.description}
+                    </p>
+                </div>
             </Card>
 
-            <!-- Author Notes -->
-            {#if product.authorNotes}
-                <section class="mb-12">
-                    <Alert class="bg-blue-50 border-blue-200">
-                        <Info class="h-5 w-5 text-blue-600" />
-                        <AlertTitle class="text-blue-600 mb-2 font-mono">Author Notes</AlertTitle>
-                        <AlertDescription class="text-gray-700 font-mono">
-                            {product.authorNotes}
-                        </AlertDescription>
-                    </Alert>
-                </section>
-            {/if}
-
-            <!-- Community Feedback -->
-            <section class="mb-12">
-                <h2 class="text-2xl font-semibold mb-6 flex items-center gap-2">
-                    <Users class="h-6 w-6 text-gray-400" />
-                    Community Feedback
-                </h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- What People Like -->
-                    <Card class="p-6 bg-green-50/50">
-                        <div class="flex items-center gap-2 mb-4">
-                            <ThumbsUpIcon class="h-5 w-5 text-green-600" />
-                            <h3 class="font-medium">What People Like</h3>
-                        </div>
-                        <ul class="space-y-3">
-                            {#if Array.isArray(product.likes)}
-                                {#each product.likes as like}
-                                    <li class="flex items-start gap-2">
-                                        <Check class="h-4 w-4 text-green-600 mt-1 shrink-0" />
-                                        <span>{like}</span>
-                                    </li>
-                                {/each}
-                            {:else}
-                                <li class="text-gray-500">No likes yet</li>
-                            {/if}
-                        </ul>
-                    </Card>
-
-                    <!-- Points to Consider -->
-                    <Card class="p-6 bg-red-50/50">
-                        <div class="flex items-center gap-2 mb-4">
-                            <ThumbsDownIcon class="h-5 w-5 text-red-600" />
-                            <h3 class="font-medium">Points to Consider</h3>
-                        </div>
-                        <ul class="space-y-3">
-                            {#if Array.isArray(product.dislikes)}
-                                {#each product.dislikes as dislike}
-                                    <li class="flex items-start gap-2">
-                                        <AlertCircle class="h-4 w-4 text-red-600 mt-1 shrink-0" />
-                                        <span>{dislike}</span>
-                                    </li>
-                                {/each}
-                            {:else}
-                                <li class="text-gray-500">No points to consider yet</li>
-                            {/if}
-                        </ul>
-                    </Card>
-                </div>
-            </section>
 
             <!-- Community Feedback (Fixed) -->
             <div class="grid md:grid-cols-2 gap-6">
@@ -494,7 +435,7 @@
                     </div>
                     <ul class="space-y-3">
                         {#if product.likes && product.likes.length > 0}
-                            {#each product.likes as like}
+                            {#each product.likes.split(',').map(item => item.trim()).map(item => item.charAt(0).toUpperCase() + item.slice(1)) as like}
                                 <li class="flex items-start gap-2">
                                     <Check class="h-4 w-4 text-green-600 mt-1 shrink-0" />
                                     <span>{like}</span>
@@ -513,7 +454,7 @@
                     </div>
                     <ul class="space-y-3">
                         {#if product.dislikes && product.dislikes.length > 0}
-                            {#each product.dislikes as dislike}
+                            {#each product.dislikes.split(',').map(item => item.trim()).map(item => item.charAt(0).toUpperCase() + item.slice(1)) as dislike}
                                 <li class="flex items-start gap-2">
                                     <AlertCircle class="h-4 w-4 text-red-600 mt-1 shrink-0" />
                                     <span>{dislike}</span>
@@ -526,18 +467,14 @@
                 </Card>
             </div>
 
-            <!-- Product Information Last Updated -->
-            <section class="mb-12">
-                <h2 class="text-xl font-semibold mb-4">Product Information Last Updated</h2>
-                <p class="text-gray-600 font-mono">
-                    {formatDate(product.updatedAt)}
-                </p>
-            </section>
+
+            
 
             <!-- Last Updated (Smaller) -->
-            <p class="text-xs text-gray-400 italic text-center mt-16 mb-4">
+            <p class="text-xs text-gray-400 font-mono italic text-center mt-16 mb-4">
                 Product information last updated: {formatDate(product.updatedAt)}
             </p>
+        </div>
         </div>
     </div>
 {/if}

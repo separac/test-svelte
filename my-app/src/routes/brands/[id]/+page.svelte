@@ -77,6 +77,8 @@
             <div class="container max-w-screen-xl mx-auto">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-3 text-sm text-gray-600 mb-8 font-mono">
+                    <a href="/" class="hover:text-blue-600">Home</a>
+                    <ChevronRight class="h-4 w-4" />
                     <a href="/brands" class="hover:text-blue-600">Brands</a>
                     <ChevronRight class="h-4 w-4" />
                     <span>{data.brand.category.mainCategory}</span>
