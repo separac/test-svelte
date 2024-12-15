@@ -20,6 +20,7 @@ export const products = pgTable('products', {
   author_notes: text('author_notes'),
   category_id: integer('category_id').references(() => categories.id),
   brand_id: integer('brand_id').references(() => brands.id),
+  updated_at: timestamp('updated_at'),
 });
 
 export const categories = pgTable('categories', {
@@ -45,3 +46,10 @@ export const brandsRelations = relations(brands, ({ many, one }) => ({
     references: [categories.id],
   }),
 }));
+
+// Example schema definition
+export const productImages = pgTable('product_images', {
+    id: integer('id').primaryKey(),
+    product_id: integer('product_id').references(() => products.id),
+    url: text('url')
+});

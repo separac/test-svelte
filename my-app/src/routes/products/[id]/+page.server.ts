@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { products, brands, categories } from '$lib/server/db/schema';
+import { products, brands, categories, productImages } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -12,14 +12,13 @@ export const load: PageServerLoad = async ({ params }) => {
             throw error(400, 'Invalid product ID');
         }
 
+        // First get the product with its relations
         const [product] = await db
             .select({
                 id: products.id,
                 name: products.name,
                 description: products.description,
                 msrp: products.msrp,
-                currentPrice: products.current_price,
-                priceLastUpdated: products.price_last_updated,
                 productLink: products.product_link,
                 affiliateLink: products.affiliate_link,
                 warrantyInfo: products.warranty_info,
@@ -29,14 +28,15 @@ export const load: PageServerLoad = async ({ params }) => {
                 likes: products.likes,
                 dislikes: products.dislikes,
                 authorNotes: products.author_notes,
+                updatedAt: products.updated_at,
                 brand: {
                     id: brands.id,
                     name: brands.name,
                     website: brands.website
                 },
                 category: {
-                    mainCategory: categories.main_category,
-                    subCategory: categories.subcategory
+                    main: categories.main_category,
+                    sub: categories.subcategory
                 }
             })
             .from(products)
@@ -48,7 +48,23 @@ export const load: PageServerLoad = async ({ params }) => {
             throw error(404, 'Product not found');
         }
 
-        return { product };
+        // Then get the images separately
+        const images = await db
+            .select({
+                url: productImages.url
+            })
+            .from(productImages)
+            .where(eq(productImages.product_id, productId));
+
+        // Combine product and images
+        const productWithImages = {
+            ...product,
+            images
+        };
+
+        return {
+            product: productWithImages
+        };
 
     } catch (err) {
         console.error('Error loading product:', err);
