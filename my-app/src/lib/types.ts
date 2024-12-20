@@ -39,13 +39,21 @@ export interface BrandEntity {
 export interface Product {
   id: string;
   name: string;
+  /**brand: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  category: {
+    main: string;
+    sub: string;
+  };**/
   brandId: string;
   brandName: string;
   brandUrl: string;
-  category: string;
   categoryMain: string;
   categorySub: string;
-  description: string;
+  description: string;  // Make sure this exists and is exposed
   msrp: number;
   images: string[];
   likes: string[];
@@ -89,41 +97,58 @@ export interface Category {
   sub: string;
 }
 
-export interface PageData {
-  products: Product[];
-  total: number;
-  filterOptions: {
-    categories: CategoryFilter[];
-    brands: string[];
-    priceRanges: PriceRange[];
-    products: string[];
-  };
-  page: number;
-  pageSize: string | number;
+// Remove duplicate interfaces and consolidate filter types
+export interface FilterValue {
+  value: string;
+  label: string;
 }
 
-export interface SortState {
-  field: keyof Product;
-  direction: 'asc' | 'desc';
-}
-
-// Add these new types
 export interface PriceRange {
+  value: string;
   label: string;
   min: number;
   max?: number;
 }
 
+export interface FilterOptions {
+  categories: {
+    type: 'category';
+    values: CategoryFilter[];
+  };
+  brands: {
+    type: 'brand';
+    values: FilterValue[];
+  };
+  prices: {
+    type: 'price';
+    values: PriceRange[];
+  };
+  products: {
+    type: 'product';
+    values: FilterValue[];
+  };
+}
+
+// Ensure CategoryFilter includes proper typing
 export interface CategoryFilter {
   mainCategory: string;
   subCategories: string[];
+  value: string;
+  label: string;
 }
 
-export interface FilterOptions {
-  categories: CategoryFilter[];
-  brands: string[];
-  priceRanges: PriceRange[];ß
-  products?: string[];
+// Update PageData to use the new FilterOptions
+export interface PageData {
+  products: Product[];
+  total: number;
+  filterOptions: FilterOptions;
+  page: number;
+  pageSize: number;
+}
+
+export interface SortState {
+  field: keyof Product;
+  direction: 'asc' | 'desc';
 }
 
 // Modify ColumnDef to include filterType
@@ -138,7 +163,7 @@ export interface ColumnDef {
 
 // Update Filter type
 export interface Filter {
-  type: 'category' | 'brand' | 'price' | 'product';  // Add 'product' here
+  type: 'category' | 'brand' | 'price';
   values: string[]; // For categories and brands
   ranges?: PriceRange[]; // For price ranges
 }
@@ -147,8 +172,3 @@ export interface PaginationState {
   page: number;
   pageSize: number;
 }
-
-export interface FilterItem {
-  mainCategory: string;
-  subCategories: string[];
-};

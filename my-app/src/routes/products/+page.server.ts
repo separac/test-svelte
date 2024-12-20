@@ -1,12 +1,88 @@
 import { error } from '@sveltejs/kit';
 import { db } from "$lib/server/db";
 import type { PageServerLoad } from './$types';
-import type { Product, PageData } from '$lib/types';
+import type { Product, PageData, FilterOptions, FilterValue, CategoryFilter, PriceRange } from '$lib/types';
 import { brands as brandsTable, categories as categoriesTable, products as productsTable } from "$lib/server/db/schema";
 import { eq, asc, desc, or, ilike, and, gte, lt, sql } from 'drizzle-orm';
 
+async function getFilterOptions(): Promise<FilterOptions> {
+  // Get unique categories with their subcategories
+  const categories = await db
+    .selectDistinct({
+      main_category: categoriesTable.main_category,
+      subcategory: categoriesTable.subcategory
+    })
+    .from(categoriesTable)
+    .where(sql`${categoriesTable.main_category} is not null`);
+
+  // Process categories to group subcategories
+  const categoryMap = new Map<string, string[]>();
+  categories.forEach(({ main_category, subcategory }) => {
+    if (!categoryMap.has(main_category)) {
+      categoryMap.set(main_category, []);
+    }
+    if (subcategory) {
+      categoryMap.get(main_category)?.push(subcategory);
+    }
+  });
+
+  const processedCategories = Array.from(categoryMap.entries()).map(([main, subs]) => ({
+    mainCategory: main,
+    subCategories: subs,
+    value: main,
+    label: main
+  }));
+
+  // Get unique brands
+  const brands = await db
+    .selectDistinct({
+      value: brandsTable.name,
+      label: brandsTable.name
+    })
+    .from(brandsTable)
+    .where(sql`${brandsTable.name} is not null`);
+
+  // Get unique products
+  const products = await db
+    .selectDistinct({
+      value: productsTable.name,
+      label: productsTable.name
+    })
+    .from(productsTable)
+    .where(sql`${productsTable.name} is not null`);
+
+  return {
+    categories: {
+      type: 'category',
+      values: processedCategories
+    },
+    brands: {
+      type: 'brand',
+      values: brands
+    },
+    prices: {
+      type: 'price',
+      values: [
+        { value: '0-50', label: 'Under $50', min: 0, max: 50 },
+        { value: '50-100', label: '$50 to $100', min: 50, max: 100 },
+        { value: '100-200', label: '$100 to $200', min: 100, max: 200 },
+        { value: '200-500', label: '$200 to $500', min: 200, max: 500 },
+        { value: '500-1000', label: '$500 to $1000', min: 500, max: 1000 },
+        { value: '1000-', label: '$1000 and up', min: 1000 }
+      ]
+    },
+    products: {
+      type: 'product',
+      values: products
+    }
+  };
+}
+
 export const load = (async ({ url }) => {
   try {
+    // Get filter options first
+    const filterOptions = await getFilterOptions();
+    
     // Parse URL params
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = url.searchParams.get('pageSize') || '20';
@@ -14,19 +90,12 @@ export const load = (async ({ url }) => {
     const sortDirection = url.searchParams.get('sortDirection') || 'asc';
     const search = url.searchParams.get('search')?.trim() || '';
 
-    // Get filter data first
-    const filterOptions = {
-      categories: await getCategories(),
-      brands: await getBrands(),
-      priceRanges: getPriceRanges(),
-      products: await getProducts()
-    };
-
     // Base query
     let query = db
       .select({
         id: productsTable.id,
         name: productsTable.name,
+        description: productsTable.description, // Add this line
         msrp: productsTable.msrp,
         categoryMain: categoriesTable.main_category,
         categorySub: categoriesTable.subcategory,
@@ -110,6 +179,7 @@ export const load = (async ({ url }) => {
     // Add sorting
     const sortColumn = {
       name: productsTable.name,
+      description: productsTable.description, // Add this line
       categoryMain: categoriesTable.main_category,
       brandName: brandsTable.name,
       msrp: productsTable.msrp
@@ -126,7 +196,7 @@ export const load = (async ({ url }) => {
     const [countResult, results] = await Promise.all([
       countQuery,
       query
-        .limit(pageSize === 'all' ? undefined : parseInt(pageSize))
+        .limit(pageSize === 'all' ? 2147483647 : parseInt(pageSize))
         .offset(pageSize === 'all' ? 0 : (page - 1) * parseInt(pageSize))
     ]);
 
@@ -146,67 +216,5 @@ export const load = (async ({ url }) => {
     });
   }
 }) satisfies PageServerLoad;
-
-// Helper functions
-async function getCategories() {
-  const categoriesData = await db
-    .select({
-      mainCategory: categoriesTable.main_category,
-      subCategory: categoriesTable.subcategory
-    })
-    .from(categoriesTable)
-    .orderBy(categoriesTable.main_category, categoriesTable.subcategory);
-
-  const categoryFilters: CategoryFilter[] = [];
-  
-  categoriesData.forEach(({ mainCategory, subCategory }) => {
-    const existing = categoryFilters.find(c => c.mainCategory === mainCategory);
-    if (existing) {
-      if (subCategory && !existing.subCategories.includes(subCategory)) {
-        existing.subCategories.push(subCategory);
-      }
-    } else {
-      categoryFilters.push({
-        mainCategory,
-        subCategories: subCategory ? [subCategory] : []
-      });
-    }
-  });
-
-  return categoryFilters;
-}
-
-async function getBrands() {
-  const brands = await db
-    .selectDistinct({ 
-      name: brandsTable.name 
-    })
-    .from(brandsTable)
-    .orderBy(brandsTable.name);
-    
-  return brands.map(b => b.name);
-}
-
-async function getProducts() {
-  const products = await db
-    .selectDistinct({ 
-      name: productsTable.name 
-    })
-    .from(productsTable)
-    .orderBy(productsTable.name);
-    
-  return products.map(p => p.name);
-}
-
-function getPriceRanges(): PriceRange[] {
-  return [
-    { label: 'Under $50', min: 0, max: 50 },
-    { label: '$50 to $100', min: 50, max: 100 },
-    { label: '$100 to $200', min: 100, max: 200 },
-    { label: '$200 to $500', min: 200, max: 500 },
-    { label: '$500 to $1000', min: 500, max: 1000 },
-    { label: '$1000 and up', min: 1000 }
-  ];
-}
 
 

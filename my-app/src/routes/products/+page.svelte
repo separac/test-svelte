@@ -12,15 +12,18 @@
   import { getCategoryIcon } from '$lib/utils/category-icons';
   import { formatCurrency } from '$lib/utils/format';
   import { browser } from '$app/environment';
+  // import FilterMenu from "$lib/components/filterMenu.svelte";
   import TableFilter from "$lib/components/table-filter.svelte";
 
 
   // Switch to unplugin-icons
   import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
+  import FilterIcon from '~icons/mdi/filter';
   import ChevronDownIcon from '~icons/mdi/chevron-down';
   import EyeIcon from '~icons/mdi/eye';
   import EyeOffIcon from '~icons/mdi/eye-off';
   import RefreshIcon from '~icons/mdi/refresh';
+  import Box from '~icons/mdi/box';  // Default icon as fallback
 
   let { data } = $props<{ data: PageData }>();
 
@@ -29,6 +32,14 @@
   { 
     key: 'name', 
     label: 'Product', 
+    visible: true, 
+    sortable: true,
+    filterable: true,
+    filterType: 'product'
+  },
+  { 
+    key: 'description', 
+    label: 'Description', 
     visible: true, 
     sortable: true,
     filterable: true,
@@ -60,6 +71,23 @@
   }
 ]);
 
+// Add this to track active filters
+let activeFilters = $state<Record<string, string[]>>({});
+
+// Update filterHandler
+function handleFilter(column: keyof Product, values: string[]) {
+  activeFilters[column] = values;
+  pagination.page = 1; // Reset to first page when filtering
+  
+  const params = new URLSearchParams($page.url.searchParams);
+  if (values.length) {
+    params.set(`filter_${column}`, values.join(','));
+  } else {
+    params.delete(`filter_${column}`);
+  }
+  goto(`?${params.toString()}`, { keepFocus: true });
+}
+
   let searchTerm = $state($page.url.searchParams.get('search') || '');
 
   let pagination = $state<PaginationState>({
@@ -83,7 +111,17 @@
   function changePage(newPage: number) {
     if (newPage >= 1 && newPage <= totalPages) {
       pagination.page = newPage;
+      updateURL();
     }
+  }
+
+  function updateURL() {
+    const params = new URLSearchParams($page.url.searchParams);
+    params.set('page', pagination.page.toString());
+    params.set('pageSize', pagination.pageSize.toString());
+    params.set('sortField', sort.field);
+    params.set('sortDirection', sort.direction);
+    goto(`?${params.toString()}`, { keepFocus: true });
   }
 
   // Derived values
@@ -132,15 +170,11 @@
     const newSize = selectedValue === 'all' ? data.total : parseInt(selectedValue);
     pagination.pageSize = newSize;
     pagination.page = 1; // Reset to first page when changing page size
+    updateURL();
   }
   // URL update effect
   $effect(() => {
-    const params = new URLSearchParams($page.url.searchParams);
-    params.set('page', pagination.page.toString());
-    params.set('pageSize', pagination.pageSize.toString());
-    params.set('sortField', sort.field);
-    params.set('sortDirection', sort.direction);
-    goto(`?${params.toString()}`, { keepFocus: true });
+    updateURL();
   });
 
   function toggleColumn(key: keyof Product) {
@@ -157,6 +191,7 @@
       sort.field = field;
       sort.direction = 'asc';
     }
+    updateURL();
   }
 
   // Reset function
@@ -187,12 +222,7 @@
     if (browser) {
       searchTerm = value;
       pagination.page = 1; // Reset to first page on search
-      
-      // Update URL and trigger navigation
-      const params = new URLSearchParams(window.location.search);
-      params.set('search', value);
-      params.set('page', '1');
-      goto(`?${params.toString()}`, { keepFocus: true });
+      updateURL();
     }
   }, 300);
 
@@ -285,6 +315,7 @@
           : parseInt(e.currentTarget.value);
         pagination.pageSize = newValue;
         pagination.page = 1;
+        updateURL();
       }}
     >
       <option value="10">10 per page</option>
@@ -318,7 +349,12 @@
                 {/if}
               </Button>
               {#if column.filterable && data.filterOptions}
-                <TableFilter {column} filterOptions={data.filterOptions} />
+                <TableFilter 
+                  {column} 
+                  filterOptions={data.filterOptions} 
+                  activeFilters={activeFilters[column.key] || []}
+                  onFilterChange={(values) => handleFilter(column.key, values)}
+                />
               {/if}
             </div>
           </TableHead>
@@ -335,6 +371,29 @@
             <TableCell>
               {#if column.key === 'msrp'}
                 {formatCurrency(product[column.key])}
+              {:else if column.key === 'categoryMain'}
+                <div class="flex flex-col">
+                  <!-- Main category with icon -->
+                  <div class="flex items-center gap-1 text-sm text-muted-foreground">
+                    <svelte:component
+                      this={getCategoryIcon(product.categoryMain, true)?.icon || Box}
+                      class="w-4 h-4"
+                    />
+                    <span>{product.categoryMain}</span>
+                  </div>
+
+                  {#if product.categorySub}
+                    <!-- Sub category with icon (indented) -->
+                    <div class="flex items-center gap-1 pl-4 text-sm">
+                      <span>↳</span>
+                      <svelte:component
+                        this={getCategoryIcon(product.categorySub, false)?.icon || Box}
+                        class="w-4 h-4"
+                      />
+                      <span>{product.categorySub}</span>
+                    </div>
+                  {/if}
+                </div>
               {:else}
                 {product[column.key]}
               {/if}
