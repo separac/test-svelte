@@ -39,15 +39,12 @@ export interface BrandEntity {
 export interface Product {
   id: string;
   name: string;
-  brand: {
-    id: string;
-    name: string;
-    url: string;
-  };
-  category: {
-    main: string;
-    sub: string;
-  };
+  brandId: string;
+  brandName: string;
+  brandUrl: string;
+  category: string;
+  categoryMain: string;
+  categorySub: string;
   description: string;
   msrp: number;
   images: string[];
@@ -91,3 +88,67 @@ export interface Category {
   main: string;
   sub: string;
 }
+
+export interface PageData {
+  products: Product[];
+  total: number;
+  filterOptions: {
+    categories: CategoryFilter[];
+    brands: string[];
+    priceRanges: PriceRange[];
+    products: string[];
+  };
+  page: number;
+  pageSize: string | number;
+}
+
+export interface SortState {
+  field: keyof Product;
+  direction: 'asc' | 'desc';
+}
+
+// Add these new types
+export interface PriceRange {
+  label: string;
+  min: number;
+  max?: number;
+}
+
+export interface CategoryFilter {
+  mainCategory: string;
+  subCategories: string[];
+}
+
+export interface FilterOptions {
+  categories: CategoryFilter[];
+  brands: string[];
+  priceRanges: PriceRange[];ß
+  products?: string[];
+}
+
+// Modify ColumnDef to include filterType
+export interface ColumnDef {
+  key: string;
+  label: string;
+  visible: boolean;
+  sortable: boolean;
+  filterable: boolean;
+  filterType?: 'category' | 'brand' | 'price' | 'product';  // Add 'product' here
+}
+
+// Update Filter type
+export interface Filter {
+  type: 'category' | 'brand' | 'price' | 'product';  // Add 'product' here
+  values: string[]; // For categories and brands
+  ranges?: PriceRange[]; // For price ranges
+}
+
+export interface PaginationState {
+  page: number;
+  pageSize: number;
+}
+
+export interface FilterItem {
+  mainCategory: string;
+  subCategories: string[];
+};

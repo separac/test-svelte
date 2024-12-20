@@ -1,14 +1,19 @@
 <!-- +page.svelte -->
 <script lang="ts">
+  import type { Product, PageData, ColumnDef, PaginationState, SortState } from '$lib/types';
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "$lib/components/ui/table";
   import { Input } from "$lib/components/ui/input";
+  import * as Popover from "$lib/components/ui/popover";
+  import { Badge } from "$lib/components/ui/badge";
   import { Button } from "$lib/components/ui/button";
   import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "$lib/components/ui/dropdown-menu";
   import { getCategoryIcon } from '$lib/utils/category-icons';
   import { formatCurrency } from '$lib/utils/format';
   import { browser } from '$app/environment';
+  import TableFilter from "$lib/components/table-filter.svelte";
+
 
   // Switch to unplugin-icons
   import ArrowUpDownIcon from '~icons/mdi/arrow-up-down';
@@ -16,23 +21,50 @@
   import EyeIcon from '~icons/mdi/eye';
   import EyeOffIcon from '~icons/mdi/eye-off';
   import RefreshIcon from '~icons/mdi/refresh';
-  import ExternalLinkIcon from '~icons/mdi/open-in-new';
-  import ShoppingIcon from '~icons/mdi/shopping';
 
   let { data } = $props<{ data: PageData }>();
 
-  let columns = $state<ColumnDef[]>([
-    { key: 'name', label: 'Product', visible: true, sortable: true },
-    { key: 'mainCategory', label: 'Category', visible: true, sortable: true },
-    { key: 'brandName', label: 'Brand', visible: true, sortable: true },
-    { key: 'msrp', label: 'MSRP', visible: true, sortable: true }
-  ]);
+
+  let columns = $state<Array<ColumnDef & { key: keyof Product }>>([
+  { 
+    key: 'name', 
+    label: 'Product', 
+    visible: true, 
+    sortable: true,
+    filterable: true,
+    filterType: 'product'
+  },
+  { 
+    key: 'categoryMain', 
+    label: 'Category', 
+    visible: true, 
+    sortable: true, 
+    filterable: true,
+    filterType: 'category'
+  },
+  { 
+    key: 'brandName', 
+    label: 'Brand', 
+    visible: true, 
+    sortable: true, 
+    filterable: true,
+    filterType: 'brand'
+  },
+  { 
+    key: 'msrp', 
+    label: 'MSRP', 
+    visible: true, 
+    sortable: true, 
+    filterable: true,
+    filterType: 'price'
+  }
+]);
 
   let searchTerm = $state($page.url.searchParams.get('search') || '');
 
   let pagination = $state<PaginationState>({
     page: Number($page.url.searchParams.get('page')) || 1,
-    pageSize: Number($page.url.searchParams.get('pageSize')) || 10 // Default page size 10
+    pageSize: Number($page.url.searchParams.get('pageSize')) || 20 // Default page size 20
   });
 
   let sort = $state<SortState>({
@@ -131,7 +163,7 @@
   function resetAll() {
     searchTerm = '';
     pagination.page = 1;
-    pagination.pageSize = 10;
+    pagination.pageSize = 20;
     sort.field = 'name';
     sort.direction = 'asc';
     columns.forEach(col => col.visible = true);
@@ -178,6 +210,12 @@
   function handleProductClick(productId: number) {
     goto(`/products/${productId}`);
   }
+
+
+// Add this debug log
+  $effect(() => {
+    console.log('Filter Options:', data.filterOptions);
+  });
 </script>
 
 <div class="container max-w-screen-xl space-y-8 py-8 relative z-[1]">
@@ -256,145 +294,60 @@
       <option value="all">Show all</option>
     </select>
   </div>
+
   <!-- Table -->
   <Table class="relative z-[1]">
-    <TableHeader>
-      <TableRow>
-        {#each columns as column}
-          {#if column.visible}
-            <TableHead>
+  <TableHeader>
+    <!-- Column Headers -->
+    <TableRow>
+      {#each columns as column}
+        {#if column.visible}
+          <TableHead>
+            <div class="flex flex-col gap-2">
               <Button 
                 variant="ghost" 
                 size="sm"
-                onclick={() => toggleSort(column.key)}
+                onclick={() => column.sortable && toggleSort(column.key)}
                 class="hover:bg-muted flex items-center gap-2"
               >
                 {column.label}
-                <ArrowUpDownIcon 
-                  class={`ml-2 h-4 w-4 transition-transform ${
-                    sort.field === column.key 
-                      ? sort.direction === 'desc' 
-                        ? 'rotate-180' 
-                        : ''
-                      : ''
-                  }`}
-                />
-              </Button>
-            </TableHead>
-          {/if}
-        {/each}
-        <TableHead class="text-right">
-          <span class="text-sm font-medium">Links</span>
-        </TableHead>
-      </TableRow>
-    </TableHeader>
-
-    <TableBody>
-      {#each data.products as product (product.id)}
-        <tr 
-          class="cursor-pointer hover:bg-gray-50 transition-colors"
-          onclick={() => goto(`/products/${product.id}`)}
-          onKeyDown={(e) => e.key === 'Enter' && goto(`/products/${product.id}`)}
-          tabindex="0"
-          role="button"
-        >
-          {#each columns as column}
-            {#if column.visible}
-              <TableCell>
-                {#if column.key === 'mainCategory'}
-                  <div class="space-y-0.5 max-w-[250px]">
-                    <div class="text-sm text-gray-500">
-                      {product.mainCategory}
-                    </div>
-                    {#if product.subCategory}
-                      {@const maybeIcon = getCategoryIcon(product.subCategory, false)}
-                      <div class="flex items-center gap-1.5 text-sm">
-                        {#if maybeIcon}
-                          <div class="text-gray-600">
-                            <svelte:component this={maybeIcon.icon} size={16} />
-                          </div>
-                        {/if}
-                        <span class="text-gray-900">
-                          {product.subCategory}
-                        </span>
-                      </div>
-                    {/if}
-                  </div>
-                {:else if column.key === 'name'}
-                  <div>
-                    <div class="font-medium">{product.name}</div>
-                    {#if product.description}
-                      <div class="text-sm text-muted-foreground">{product.description}</div>
-                    {/if}
-                  </div>
-                {:else if column.key === 'msrp'}
-                  <div class="text-right">
-                    {formatCurrency(product.msrp)}
-                  </div>
-                {:else}
-                  {product[column.key]}
+                {#if column.sortable}
+                  <ArrowUpDownIcon class="ml-2 h-4 w-4 transition-transform {
+                    sort.field === column.key ? sort.direction === 'desc' ? 'rotate-180' : '' : ''
+                  }" />
                 {/if}
-              </TableCell>
-            {/if}
-          {/each}
-          <TableCell class="text-right">
-            <div class="flex justify-end items-center">
-              {#if product.productLink}
-                <a
-                  href={product.productLink}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted"
-                >
-                  <ShoppingIcon class="h-4 w-4 text-gray-600" />
-                </a>
-              {/if}
-              {#if product.affiliateLink}
-                <a
-                  href={product.affiliateLink}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  class="text-green-600 hover:text-green-800 inline-flex items-center gap-1"
-                >
-                  Affiliate
-                  <ExternalLinkIcon class="h-4 w-4" />
-                </a>
+              </Button>
+              {#if column.filterable && data.filterOptions}
+                <TableFilter {column} filterOptions={data.filterOptions} />
               {/if}
             </div>
-          </TableCell>
-        </tr>
+          </TableHead>
+        {/if}
       {/each}
-    </TableBody>
-  </Table>
+    </TableRow>
+  </TableHeader>
+
+  <TableBody>
+    {#each data.products as product (product.id)}
+      <TableRow>
+        {#each columns as column}
+          {#if column.visible}
+            <TableCell>
+              {#if column.key === 'msrp'}
+                {formatCurrency(product[column.key])}
+              {:else}
+                {product[column.key]}
+              {/if}
+            </TableCell>
+          {/if}
+        {/each}
+      </TableRow>
+    {/each}
+  </TableBody>
+</Table>
 
   <!-- Pagination -->
   <div class="flex items-center justify-between">
-    <!--
-    <div class="flex items-center gap-4">
-      <div class="text-sm text-muted-foreground">
-        Showing {endIndex} of {data.total} products
-      </div>
-      <Select.Root 
-        type="single" 
-        value="10"
-        onValueChange={(value) => {
-          const newValue = value === 'all' ? data.total : parseInt(value);
-          pagination.pageSize = newValue;
-          pagination.page = 1;
-        }}
-      >
-      <Select.Trigger class="w-[180px]">
-        <Select.Value placeholder="10 per page"/>
-      </Select.Trigger>
-      <Select.Content>
-        <Select.Item value="10">10 per page</Select.Item>
-        <Select.Item value="20">20 per page</Select.Item>
-        <Select.Item value="50">50 per page</Select.Item>
-        <Select.Item value="100">100 per page</Select.Item>
-        <Select.Item value="all">Show all</Select.Item>
-      </Select.Content>
-      </Select.Root>
-    </div> -->
    
     <div class="flex items-center gap-2">
       <Button

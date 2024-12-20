@@ -22,10 +22,18 @@ export interface SortState {
 }
 
 export interface ColumnDef {
-  key: keyof Product;
+  key: string;
   label: string;
   visible: boolean;
   sortable: boolean;
+  activeFilters?: Filter[];
+}
+
+export interface Filter {
+  type: string;
+  value: string;
+  value2?: string;
+  column?: string;
 }
 
 export interface PaginationState {
