@@ -20,17 +20,32 @@
   let selectedValues = $state<string[]>(activeFilters);
   let triggerRef = $state<HTMLButtonElement | null>(null);
 
-  let availableItems = $derived(() => {
+  let availableItems = $derived.by(() => {
     const search = searchTerm.toLowerCase();
-    
+
     if (!column.filterType) return [];
 
-    const items = filterOptions[`${column.filterType}s`].values;
-    return items.filter(item => {
-      const searchText = 'mainCategory' in item ? item.mainCategory : item.label;
-      return !search || searchText.toLowerCase().includes(search);
-    });
+    const filterKey = `${column.filterType}s`;
+    if (!filterOptions[filterKey]) return [];
+
+    const items = filterOptions[filterKey].values;
+
+    if (column.filterType === 'category') {
+      return items.filter((item: CategoryFilter) => {
+        const searchText = item.mainCategory.toLowerCase();
+        return !search || searchText.includes(search);
+      });
+    } else {
+      return items.filter((item: FilterValue) => {
+        const searchText = item.label.toLowerCase();
+        return !search || searchText.includes(search);
+      });
+    }
   });
+
+  // Add a debug inspect
+  $inspect(filterOptions);
+  $inspect(availableItems);
 
   // Update parent when selection changes
   $effect(() => {
@@ -74,7 +89,7 @@
   // Helper function to get display value
   function getDisplayValue(item: any): string {
     if (hasSubCategories(item)) return item.mainCategory;
-    return 'value' in item ? item.label : item;
+    return 'label' in item ? item.label : item;
   }
 
   function onOpenChange(isOpen: boolean) {
@@ -112,6 +127,7 @@
     </Button>
   </Popover.Trigger>
   
+  <!-- Popover content -->
   <Popover.Content class="w-[200px] p-0">
     <Command.Root>
       <Command.Input 
@@ -121,53 +137,59 @@
       />
       <Command.List class="max-h-[300px] overflow-auto">
         <Command.Empty>No results found.</Command.Empty>
-        {#each availableItems as item}
-          <Command.Item
-            value={getDisplayValue(item)}
-            onclick={() => toggleValue(getDisplayValue(item))}
-            class="flex items-center justify-between cursor-pointer"
-          >
-            <div class="flex items-center gap-2">
-              {#if hasSubCategories(item)}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  class="h-4 w-4 p-0"
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    toggleCategory(item.mainCategory);
-                  }}
-                >
-                  <ChevronRightIcon class="h-4 w-4 transition-transform {
-                    expandedCategories.includes(item.mainCategory) ? 'rotate-90' : ''
-                  }" />
-                </Button>
-              {:else}
-                <div class="w-4"></div>
-              {/if}
-              <span>{getDisplayValue(item)}</span>
-            </div>
-            {#if selectedValues.includes(getDisplayValue(item))}
-              <CheckIcon class="h-4 w-4" />
-            {/if}
-          </Command.Item>
-          
-          {#if hasSubCategories(item) && 
-              expandedCategories.includes(item.mainCategory)}
-            {#each item.subCategories as subCategory}
-              <Command.Item
-                value={subCategory}
-                onclick={() => toggleValue(subCategory)}
-                class="flex items-center justify-between pl-8 cursor-pointer"
-              >
-                <span>{subCategory}</span>
-                {#if selectedValues.includes(subCategory)}
-                  <CheckIcon class="h-4 w-4" />
+        {#if availableItems.length > 0}
+          {#each availableItems as item}
+            <Command.Item
+              value={getDisplayValue(item)}
+              onclick={() => toggleValue(getDisplayValue(item))}
+              class="flex items-center justify-between cursor-pointer"
+            >
+              <div class="flex items-center gap-2">
+                {#if hasSubCategories(item)}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    class="h-4 w-4 p-0"
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      toggleCategory(item.mainCategory);
+                    }}
+                  >
+                    <ChevronRightIcon class="h-4 w-4 transition-transform {
+                      expandedCategories.includes(item.mainCategory) ? 'rotate-90' : ''
+                    }" />
+                  </Button>
+                {:else}
+                  <div class="w-4"></div>
                 {/if}
-              </Command.Item>
-            {/each}
-          {/if}
-        {/each}
+                <span>{getDisplayValue(item)}</span>
+              </div>
+              {#if selectedValues.includes(getDisplayValue(item))}
+                <CheckIcon class="h-4 w-4" />
+              {/if}
+            </Command.Item>
+            
+            {#if hasSubCategories(item) && 
+                expandedCategories.includes(item.mainCategory)}
+              {#each item.subCategories as subCategory}
+                <Command.Item
+                  value={subCategory}
+                  onclick={() => toggleValue(subCategory)}
+                  class="flex items-center justify-between pl-8 cursor-pointer"
+                >
+                  <span>{subCategory}</span>
+                  {#if selectedValues.includes(subCategory)}
+                    <CheckIcon class="h-4 w-4" />
+                  {/if}
+                </Command.Item>
+              {/each}
+            {/if}
+          {/each}
+        {:else}
+          <Command.Item disabled>
+            <span class="text-muted-foreground">No items available.</span>
+          </Command.Item>
+        {/if}
       </Command.List>
     </Command.Root>
     

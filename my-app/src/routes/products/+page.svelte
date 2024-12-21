@@ -348,6 +348,9 @@ function handleFilter(column: keyof Product, values: string[]) {
                   }" />
                 {/if}
               </Button>
+
+              <!-- Filter Menu -->
+
               {#if column.filterable && data.filterOptions}
                 <TableFilter 
                   {column} 
@@ -356,6 +359,7 @@ function handleFilter(column: keyof Product, values: string[]) {
                   onFilterChange={(values) => handleFilter(column.key, values)}
                 />
               {/if}
+              
             </div>
           </TableHead>
         {/if}
