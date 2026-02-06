@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, isHttpError, isRedirect } from '@sveltejs/kit';
 import { db } from "$lib/server/db";
 import type { PageServerLoad } from './$types';
 import type { Product, PageData, FilterOptions, FilterValue, CategoryFilter, PriceRange } from '$lib/types';
@@ -85,7 +85,8 @@ export const load = (async ({ url }) => {
     
     // Parse URL params
     const page = parseInt(url.searchParams.get('page') || '1');
-    const pageSize = url.searchParams.get('pageSize') || '20';
+    const pageSizeParam = url.searchParams.get('pageSize') || '20';
+    const pageSize = pageSizeParam === 'all' ? Number.MAX_SAFE_INTEGER : parseInt(pageSizeParam);
     const sortField = url.searchParams.get('sortField') || 'name';
     const sortDirection = url.searchParams.get('sortDirection') || 'asc';
     const search = url.searchParams.get('search')?.trim() || '';
@@ -95,7 +96,7 @@ export const load = (async ({ url }) => {
       .select({
         id: productsTable.id,
         name: productsTable.name,
-        description: productsTable.description, // Add this line
+        description: productsTable.description, // Ensure description is selected
         msrp: productsTable.msrp,
         categoryMain: categoriesTable.main_category,
         categorySub: categoriesTable.subcategory,
@@ -109,13 +110,14 @@ export const load = (async ({ url }) => {
     // Build where conditions
     const whereConditions = [];
 
-    // Search condition
+    // Search condition for product name, brand name, category main, and description
     if (search) {
       whereConditions.push(
         or(
           ilike(productsTable.name, `%${search}%`),
           ilike(brandsTable.name, `%${search}%`),
-          ilike(categoriesTable.main_category, `%${search}%`)
+          ilike(categoriesTable.main_category, `%${search}%`),
+          ilike(productsTable.description, `%${search}%`) // Add description search
         )
       );
     }
@@ -167,6 +169,9 @@ export const load = (async ({ url }) => {
           case 'product':
             whereConditions.push(or(...values.map(value => eq(productsTable.name, value))));
             break;
+          case 'keyword': // Add handling for keyword filter type
+            whereConditions.push(ilike(productsTable.description, `%${values.join(' ')}%`));
+            break;
         }
       }
     });
@@ -179,7 +184,7 @@ export const load = (async ({ url }) => {
     // Add sorting
     const sortColumn = {
       name: productsTable.name,
-      description: productsTable.description, // Add this line
+      description: productsTable.description, // Ensure sorting by description
       categoryMain: categoriesTable.main_category,
       brandName: brandsTable.name,
       msrp: productsTable.msrp
@@ -196,8 +201,8 @@ export const load = (async ({ url }) => {
     const [countResult, results] = await Promise.all([
       countQuery,
       query
-        .limit(pageSize === 'all' ? 2147483647 : parseInt(pageSize))
-        .offset(pageSize === 'all' ? 0 : (page - 1) * parseInt(pageSize))
+        .limit(pageSize)
+        .offset(pageSize === Number.MAX_SAFE_INTEGER ? 0 : (page - 1) * pageSize)
     ]);
 
     return {
@@ -210,11 +215,13 @@ export const load = (async ({ url }) => {
 
   } catch (err) {
     console.error('Load error:', err);
-    error(500, {
-      message: 'Failed to load products',
-      error: err instanceof Error ? err.message : String(err)
-    });
+    if (isHttpError(err) || isRedirect(err)) {
+      error(err.status, err.message);
+    } else {
+      error(500, 'Unexpected error');
+    }
   }
 }) satisfies PageServerLoad;
+
 
 

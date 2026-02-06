@@ -43,7 +43,7 @@
     visible: true, 
     sortable: true,
     filterable: true,
-    filterType: 'product'
+    filterType: 'keyword' // Change filterType to 'keyword'
   },
   { 
     key: 'categoryMain', 
@@ -76,15 +76,37 @@ let activeFilters = $state<Record<string, string[]>>({});
 
 // Update filterHandler
 function handleFilter(column: keyof Product, values: string[]) {
-  activeFilters[column] = values;
+  if (column === 'description') {
+    searchTerm = values.join(' '); // Combine values into a single search term
+  } else {
+    activeFilters[column] = values;
+  }
   pagination.page = 1; // Reset to first page when filtering
   
+  // Update URL with filter parameters
   const params = new URLSearchParams($page.url.searchParams);
-  if (values.length) {
-    params.set(`filter_${column}`, values.join(','));
+  
+  // Clear existing filter params
+  [...params.entries()].forEach(([key]) => {
+    if (key.startsWith('filter_')) {
+      params.delete(key);
+    }
+  });
+  
+  // Add new filter params
+  Object.entries(activeFilters).forEach(([key, values]) => {
+    if (values.length > 0) {
+      params.set(`filter_${key}`, values.join(','));
+    }
+  });
+  
+  // Add search term if exists
+  if (searchTerm) {
+    params.set('search', searchTerm);
   } else {
-    params.delete(`filter_${column}`);
+    params.delete('search');
   }
+  
   goto(`?${params.toString()}`, { keepFocus: true });
 }
 
@@ -201,6 +223,7 @@ function handleFilter(column: keyof Product, values: string[]) {
     pagination.pageSize = 20;
     sort.field = 'name';
     sort.direction = 'asc';
+    activeFilters = {}; // Reset filters
     columns.forEach(col => col.visible = true);
     goto('?', { keepFocus: true });
   }
@@ -234,6 +257,14 @@ function handleFilter(column: keyof Product, values: string[]) {
     params.set('pageSize', pagination.pageSize.toString());
     params.set('sortField', sort.field);
     params.set('sortDirection', sort.direction);
+    
+    // Add filter parameters
+    Object.entries(activeFilters).forEach(([key, values]) => {
+      if (values.length > 0) {
+        params.set(`filter_${key}`, values.join(','));
+      }
+    });
+    
     goto(`?${params.toString()}`, { keepFocus: true });
   });
 

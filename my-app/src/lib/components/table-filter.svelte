@@ -20,10 +20,16 @@
   let selectedValues = $state<string[]>(activeFilters);
   let triggerRef = $state<HTMLButtonElement | null>(null);
 
+  // Update availableItems to handle 'keyword' filter type appropriately
   let availableItems = $derived.by(() => {
     const search = searchTerm.toLowerCase();
 
     if (!column.filterType) return [];
+
+    if (column.filterType === 'keyword') {
+      // For keyword search, no predefined items are needed
+      return [];
+    }
 
     const filterKey = `${column.filterType}s`;
     if (!filterOptions[filterKey]) return [];
@@ -98,6 +104,19 @@
   }
 </script>
 
+<style>
+  /* Add styles to ensure left alignment */
+  .command-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .sub-category {
+    padding-left: 1.5rem;
+  }
+</style>
+
 <Popover.Root {open} onOpenChange={onOpenChange}>
   <Popover.Trigger>
     <Button
@@ -128,78 +147,86 @@
   </Popover.Trigger>
   
   <!-- Popover content -->
-  <Popover.Content class="w-[200px] p-0">
-    <Command.Root>
-      <Command.Input 
+  <Popover.Content class="w-[250px] p-4">
+    {#if column.filterType === 'keyword'}
+      <!-- Render a simple search input for keyword filters -->
+      <Input
         placeholder={`Search ${column.label.toLowerCase()}...`}
         bind:value={searchTerm}
-        class="h-9"
+        class="h-9 mb-2"
+        on:input={() => onFilterChange([searchTerm])}
       />
-      <Command.List class="max-h-[300px] overflow-auto">
-        <Command.Empty>No results found.</Command.Empty>
-        {#if availableItems.length > 0}
-          {#each availableItems as item}
-            <Command.Item
-              value={getDisplayValue(item)}
-              onclick={() => toggleValue(getDisplayValue(item))}
-              class="flex items-center justify-between cursor-pointer"
-            >
-              <div class="flex items-center gap-2">
-                {#if hasSubCategories(item)}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    class="h-4 w-4 p-0"
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      toggleCategory(item.mainCategory);
-                    }}
-                  >
-                    <ChevronRightIcon class="h-4 w-4 transition-transform {
-                      expandedCategories.includes(item.mainCategory) ? 'rotate-90' : ''
-                    }" />
-                  </Button>
-                {:else}
-                  <div class="w-4"></div>
-                {/if}
-                <span>{getDisplayValue(item)}</span>
-              </div>
-              {#if selectedValues.includes(getDisplayValue(item))}
-                <CheckIcon class="h-4 w-4" />
-              {/if}
-            </Command.Item>
-            
-            {#if hasSubCategories(item) && 
-                expandedCategories.includes(item.mainCategory)}
-              {#each item.subCategories as subCategory}
+    {:else}
+      <Command.Root>
+        <Command.Input 
+          placeholder={`Search ${column.label.toLowerCase()}...`}
+          bind:value={searchTerm}
+          class="h-9 mb-2"
+        />
+        <Command.List class="max-h-[300px] overflow-auto">
+          <Command.Empty>No results found.</Command.Empty>
+          {#if availableItems.length > 0}
+            {#each availableItems as item}
+              <div class="command-item">
                 <Command.Item
-                  value={subCategory}
-                  onclick={() => toggleValue(subCategory)}
-                  class="flex items-center justify-between pl-8 cursor-pointer"
+                  value={getDisplayValue(item)}
+                  onclick={() => toggleValue(getDisplayValue(item))}
+                  class="flex items-center cursor-pointer"
                 >
-                  <span>{subCategory}</span>
-                  {#if selectedValues.includes(subCategory)}
-                    <CheckIcon class="h-4 w-4" />
+                  {#if hasSubCategories(item)}
+                    <button 
+                      class="mr-2"
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        toggleCategory(item.mainCategory);
+                      }}
+                    >
+                      <ChevronRightIcon class={`h-4 w-4 transition-transform ${expandedCategories.includes(item.mainCategory) ? 'rotate-90' : ''}`} />
+                    </button>
                   {/if}
+                  <span>{getDisplayValue(item)}</span>
                 </Command.Item>
-              {/each}
-            {/if}
-          {/each}
-        {:else}
-          <Command.Item disabled>
-            <span class="text-muted-foreground">No items available.</span>
-          </Command.Item>
-        {/if}
-      </Command.List>
-    </Command.Root>
-    
-    <div class="border-t p-2">
-      <Button 
-        onclick={closeAndFocusTrigger}
-        class="w-full"
-      >
-        Done
-      </Button>
-    </div>
+                {#if selectedValues.includes(getDisplayValue(item))}
+                  <CheckIcon class="h-4 w-4" />
+                {/if}
+              </div>
+
+              {#if hasSubCategories(item) && expandedCategories.includes(item.mainCategory)}
+                {#each item.subCategories as subCategory}
+                  <div class="sub-category">
+                    <div class="command-item">
+                      <Command.Item
+                        value={subCategory}
+                        onclick={() => toggleValue(subCategory)}
+                        class="flex items-center cursor-pointer"
+                      >
+                        <span>{subCategory}</span>
+                      </Command.Item>
+                      {#if selectedValues.includes(subCategory)}
+                        <CheckIcon class="h-4 w-4" />
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              {/if}
+            {/each}
+          {:else}
+            <Command.Item disabled>
+              <span class="text-muted-foreground">No items available.</span>
+
+            </Command.Item>
+          {/if}
+        </Command.List>
+      </Command.Root>
+      
+      <div class="border-t mt-4 pt-2">
+        <Button 
+          onclick={closeAndFocusTrigger}
+          class="w-full"
+        >
+          Done
+        </Button>
+      </div>
+    {/if}
   </Popover.Content>
 </Popover.Root>
